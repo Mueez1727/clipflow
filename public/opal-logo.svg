@@ -1,0 +1,11 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ClipFlow logo">
+  <rect width="48" height="48" rx="12" fill="url(#clipflow-gradient)"/>
+  <path d="M19 15.5C19 14.1193 20.567 13.2208 21.8 13.9L32.2 19.9C33.4333 20.5792 33.4333 22.3784 32.2 23.0576L21.8 29.0576C20.567 29.7368 19 28.8383 19 27.4576V15.5Z" fill="white"/>
+  <path d="M14 20C14 18.8954 14.8954 18 16 18H17C18.1046 18 19 18.8954 19 20V28C19 29.1046 18.1046 30 17 30H16C14.8954 30 14 29.1046 14 28V20Z" fill="white" fill-opacity="0.9"/>
+  <defs>
+    <linearGradient id="clipflow-gradient" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#5B21B6"/>
+    </linearGradient>
+  </defs>
+</svg>

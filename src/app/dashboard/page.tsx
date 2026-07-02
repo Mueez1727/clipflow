@@ -1,0 +1,21 @@
+import { onAuthenticateUser } from '@/actions/user'
+import { redirect } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
+
+const DasboardPage = async () => {
+  //Authentication
+  const auth = await onAuthenticateUser()
+  console.log('AUTH CALLBACK RESULT:', auth)
+  if (
+    (auth.status === 200 || auth.status === 201) &&
+    auth.user?.workspace?.length
+  ) {
+    return redirect(`/dashboard/${auth.user?.workspace[0].id}`)
+  } else
+  if (auth.status === 400 || auth.status === 500 || auth.status === 404) {
+    return redirect('/auth/sign-in')
+  }
+}
+
+export default DasboardPage
