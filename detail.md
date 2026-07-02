@@ -59,7 +59,7 @@ Browser / Desktop (HTTP)
 
 | File | Role |
 |------|------|
-| `src/middleware.ts` | Clerk auth guard for `/dashboard`, CORS for desktop (`localhost:5173`) |
+| `src/middleware.ts` | Clerk auth guard for `/dashboard`, CORS for desktop via configured origins |
 | `src/actions/user.ts` | User auth sync, invites, comments, subscriptions |
 | `src/actions/workspace.ts` | Workspaces, folders, videos, Wix integration |
 | `src/lib/prisma.ts` | Prisma singleton client |
@@ -79,6 +79,7 @@ See `.env.example` for the full list. Required for local dev:
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk frontend key |
 | `CLERK_SECRET_KEY` | Yes | Clerk backend key |
 | `NEXT_PUBLIC_HOST_URL` | Yes | App base URL for links/invites |
+| `NEXT_PUBLIC_API_URL` | Yes in production | Deployed API base URL for frontend API calls |
 | `NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL` | For playback | CDN prefix for video streams |
 
 Optional: `MAILER_EMAIL`, `MAILER_PASSWORD`, `WIX_OAUTH_KEY`, `CLOUD_WAYS_POST`, Stripe/Voiceflow keys (features disabled).
@@ -90,7 +91,7 @@ cd opal-webprodigies
 npm install
 npx prisma generate          # after schema changes
 npx prisma db push           # sync schema to local DB (no migrations checked in)
-npm run dev                  # http://localhost:3000
+npm run dev                  # local app URL shown in terminal
 npm run build                # production build
 npm run start                # serve production build
 ```
@@ -101,8 +102,8 @@ npm run start                # serve production build
 
 - Desktop calls `GET /api/auth/{clerkId}` to sync/fetch user profile
 - Desktop calls `POST /api/studio/{userId}` to save screen/mic/preset
-- Middleware allows CORS from `http://localhost:5173`
-- Vite dev proxy in desktop forwards `/api` → `localhost:3000/api`
+- Middleware allows CORS from configured origins
+- Vite dev proxy in desktop forwards `/api` to the local Next.js API origin
 
 ### Express Server (`OPAL-WEBPRODIGIES-EXPRESS`)
 
@@ -112,7 +113,7 @@ During recording upload, Express calls:
 - `POST /api/recording/{userId}/transcribe` — save AI title/summary (PRO)
 - `POST /api/recording/{userId}/complete` — mark `processing: false`
 
-Configure `NEXT_API_HOST=http://localhost:3000/api/` in the Express `.env`.
+Configure `NEXT_API_HOST` in the Express `.env` to target the Next.js API origin.
 
 ## Known Limitations
 
