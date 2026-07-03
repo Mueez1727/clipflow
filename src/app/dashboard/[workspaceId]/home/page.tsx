@@ -1,34 +1,47 @@
-import { getWixContent, howToPost } from '@/actions/workspace'
-import HowToPost from '@/components/global/how-to-post'
-import VideoCard from '@/components/global/videos/video-card'
+import { onAuthenticateUser } from '@/actions/user'
+import {
+  getDashboardStats,
+  getRecentVideos,
+} from '@/actions/workspace'
+import HomeDashboard from '@/components/global/dashboard/home-dashboard'
 import React from 'react'
 
-const Home = async () => {
-  const videos = await getWixContent()
-  const post = await howToPost()
+type Props = {
+  params: { workspaceId: string }
+}
 
-  console.log(videos)
+const Home = async ({ params: { workspaceId } }: Props) => {
+  const [statsResult, recentVideosResult, auth] = await Promise.all([
+    getDashboardStats(workspaceId),
+    getRecentVideos(workspaceId),
+    onAuthenticateUser(),
+  ])
+
+  const userName =
+    auth.user?.firstname?.trim() ||
+    auth.user?.email?.split('@')[0] ||
+    'there'
+
+  const stats =
+    statsResult.status === 200
+      ? statsResult.data
+      : {
+          totalVideos: 0,
+          totalFolders: 0,
+          videosProcessed: 0,
+          storageUsed: null,
+        }
+
+  const recentVideos =
+    recentVideosResult.status === 200 ? recentVideosResult.data : []
 
   return (
-    <div className="flex items-center justify-center flex-col gap-2">
-      <h1 className="text-2xl font-bold">A Message From The ClipFlow Team</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:w-1/2">
-        {videos.status === 200
-          ? videos.data?.map((video) => (
-              <VideoCard
-                key={video.id}
-                {...video}
-                workspaceId={video.workSpaceId!}
-              />
-            ))
-          : ''}
-        <HowToPost
-          title={post?.title}
-          html={post?.content}
-        />
-      </div>
-    </div>
+    <HomeDashboard
+      workspaceId={workspaceId}
+      userName={userName}
+      stats={stats}
+      recentVideos={recentVideos}
+    />
   )
 }
 

@@ -225,6 +225,105 @@ export const renameFolders = async (folderId: string, name: string) => {
   }
 }
 
+export const deleteFolder = async (folderId: string) => {
+  try {
+    const folder = await client.folder.delete({
+      where: {
+        id: folderId,
+      },
+    })
+    if (folder) {
+      return { status: 200, data: 'Folder Deleted' }
+    }
+    return { status: 400, data: 'Folder does not exist' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Opps! something went wrong' }
+  }
+}
+
+const workspaceVideoWhere = (workSpaceId: string) => ({
+  OR: [{ workSpaceId }, { folderId: workSpaceId }],
+})
+
+const videoListSelect = {
+  id: true,
+  title: true,
+  createdAt: true,
+  source: true,
+  processing: true,
+  Folder: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  User: {
+    select: {
+      firstname: true,
+      lastname: true,
+      image: true,
+    },
+  },
+} as const
+
+export const getDashboardStats = async (workSpaceId: string) => {
+  try {
+    const videoWhere = workspaceVideoWhere(workSpaceId)
+    const [totalVideos, totalFolders, videosProcessed] = await Promise.all([
+      client.video.count({ where: videoWhere }),
+      client.folder.count({ where: { workSpaceId } }),
+      client.video.count({ where: { ...videoWhere, processing: false } }),
+    ])
+
+    return {
+      status: 200,
+      data: {
+        totalVideos,
+        totalFolders,
+        videosProcessed,
+        storageUsed: null as string | null,
+      },
+    }
+  } catch (error) {
+    console.log(error)
+    return {
+      status: 400,
+      data: {
+        totalVideos: 0,
+        totalFolders: 0,
+        videosProcessed: 0,
+        storageUsed: null as string | null,
+      },
+    }
+  }
+}
+
+export const getRecentVideos = async (workSpaceId: string, limit = 4) => {
+  try {
+    const user = await currentUser()
+    if (!user) return { status: 404, data: [] }
+
+    const videos = await client.video.findMany({
+      where: workspaceVideoWhere(workSpaceId),
+      select: videoListSelect,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+    })
+
+    if (videos.length > 0) {
+      return { status: 200, data: videos }
+    }
+
+    return { status: 404, data: [] }
+  } catch (error) {
+    console.log(error)
+    return { status: 400, data: [] }
+  }
+}
+
 export const createFolder = async (workspaceId: string) => {
   try {
     const isNewFolder = await client.workSpace.update({
