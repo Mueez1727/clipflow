@@ -25,11 +25,9 @@ const Layout = async ({ params: { workspaceId }, children }: Props) => {
 
   const hasAccess = await verifyAccessToWorkspace(workspaceId)
 
-  if (hasAccess.status !== 200) {
+  if (hasAccess.status !== 200 || !hasAccess.data?.workspace) {
     redirect(`/dashboard/${auth.user?.workspace[0].id}/home`)
   }
-
-  if (!hasAccess.data?.workspace) return null
 
   const query = new QueryClient()
 

@@ -27,6 +27,23 @@ export const getCurrentDbUser = cache(async (): Promise<DbUser | null> => {
   })
 })
 
+/** True when the user owns the workspace or has a Member row (invite join). */
+export const hasWorkspaceAccess = cache(
+  async (workspaceId: string, dbUserId: string) => {
+    const workspace = await client.workSpace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: [
+          { userId: dbUserId },
+          { members: { some: { userId: dbUserId } } },
+        ],
+      },
+      select: { id: true },
+    })
+    return Boolean(workspace)
+  }
+)
+
 export const getWorkspaceMemberIds = async (workspaceId: string) => {
   const workspace = await client.workSpace.findUnique({
     where: { id: workspaceId },

@@ -3,21 +3,12 @@
 import { client } from '@/lib/prisma'
 import {
   createNotification,
+  getCurrentDbUser,
+  hasWorkspaceAccess,
   logActivity,
   notifyWorkspaceMembers,
   resolveMentionedUserIds,
 } from '@/lib/server/workspace-helpers'
-import { currentUser } from '@clerk/nextjs/server'
-
-const getCurrentDbUser = async () => {
-  const user = await currentUser()
-  if (!user) return null
-  const dbUser = await client.user.findUnique({
-    where: { clerkid: user.id },
-    select: { id: true, firstname: true, lastname: true, image: true, email: true },
-  })
-  return dbUser
-}
 
 const generateJoinCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -206,6 +197,9 @@ export const getWorkspaceDetails = async (workspaceId: string) => {
     const dbUser = await getCurrentDbUser()
     if (!dbUser) return { status: 404, data: null }
 
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: null }
+
     const workspace = await client.workSpace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -236,6 +230,12 @@ export const getWorkspaceDetails = async (workspaceId: string) => {
 
 export const getWorkspaceMembers = async (workspaceId: string) => {
   try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 403, data: [] }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: [] }
+
     const workspace = await client.workSpace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -319,6 +319,12 @@ type WorkspaceVideoItem = {
 
 export const getWorkspaceSharedVideos = async (workspaceId: string) => {
   try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 403, data: [] }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: [] }
+
     const [owned, shared] = await Promise.all([
       client.video.findMany({
         where: { workSpaceId: workspaceId },
@@ -398,6 +404,12 @@ export const getWorkspaceSharedVideos = async (workspaceId: string) => {
 
 export const getWorkspaceOverview = async (workspaceId: string) => {
   try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 403, data: null }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: null }
+
     const [videoCount, sharedCount, memberCount, latestVideosResult, members] =
       await Promise.all([
         client.video.count({ where: { workSpaceId: workspaceId } }),
@@ -523,6 +535,12 @@ export const shareVideoToWorkspace = async (
 
 export const getWorkspaceMessages = async (workspaceId: string) => {
   try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 403, data: [] }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: [] }
+
     const messages = await client.message.findMany({
       where: { workSpaceId: workspaceId },
       select: {
@@ -538,13 +556,11 @@ export const getWorkspaceMessages = async (workspaceId: string) => {
       take: 200,
     })
 
-    const dbUser = await getCurrentDbUser()
-
     return {
       status: 200,
       data: messages.map((m) => ({
         ...m,
-        isOwn: dbUser?.id === m.userId,
+        isOwn: dbUser.id === m.userId,
       })),
     }
   } catch (error) {
@@ -560,6 +576,9 @@ export const sendWorkspaceMessage = async (
   try {
     const dbUser = await getCurrentDbUser()
     if (!dbUser) return { status: 404, data: 'User not found' }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: 'You are not a member of this workspace' }
 
     const trimmed = content.trim()
     if (!trimmed) return { status: 400, data: 'Message cannot be empty' }

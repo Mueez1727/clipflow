@@ -10,9 +10,9 @@ import axios from 'axios'
 export const verifyAccessToWorkspace = async (workspaceId: string) => {
   try {
     const user = await currentUser()
-    if (!user) return { status: 403 }
+    if (!user) return { status: 403, data: { workspace: null } }
 
-    const isUserInWorkspace = await client.workSpace.findUnique({
+    const isUserInWorkspace = await client.workSpace.findFirst({
       where: {
         id: workspaceId,
         OR: [
@@ -23,7 +23,7 @@ export const verifyAccessToWorkspace = async (workspaceId: string) => {
           },
           {
             members: {
-              every: {
+              some: {
                 User: {
                   clerkid: user.id,
                 },
@@ -33,6 +33,11 @@ export const verifyAccessToWorkspace = async (workspaceId: string) => {
         ],
       },
     })
+
+    if (!isUserInWorkspace) {
+      return { status: 403, data: { workspace: null } }
+    }
+
     return {
       status: 200,
       data: { workspace: isUserInWorkspace },
