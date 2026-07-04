@@ -25,7 +25,7 @@ const WorkspaceCard = ({ workspace, compact }: Props) => {
     <Link
       href={`/dashboard/${workspace.id}/workspace`}
       className={cn(
-        'group flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#7C3AED]/40 hover:shadow-md',
+        'group flex shrink-0 items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#7C3AED]/40 hover:shadow-md',
         compact ? 'w-full' : 'w-full'
       )}
     >
@@ -47,7 +47,8 @@ const WorkspaceCard = ({ workspace, compact }: Props) => {
             <Users className="h-3 w-3" />
             {workspace.memberCount}
           </span>
-          <span className="flex items-center gap-1 truncate">
+          <span className="truncate text-foreground/70">Private Workspace</span>
+          <span className="hidden items-center gap-1 truncate sm:flex">
             <Clock className="h-3 w-3 shrink-0" />
             {formatRelativeTime(workspace.lastActivity)}
           </span>
@@ -57,4 +58,4 @@ const WorkspaceCard = ({ workspace, compact }: Props) => {
   )
 }
 
-export default WorkspaceCard
+export default React.memo(WorkspaceCard)

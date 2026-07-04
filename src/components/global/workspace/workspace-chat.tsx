@@ -4,6 +4,7 @@ import {
   getWorkspaceMembers,
   getWorkspaceMessages,
   sendWorkspaceMessage,
+  uploadChatAttachment,
 } from '@/actions/collab-workspace'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +15,14 @@ import {
 import { useQueryData } from '@/hooks/useQueryData'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
-import { ImageIcon, Send, Smile } from 'lucide-react'
+import {
+  FileIcon,
+  FileText,
+  ImageIcon,
+  Paperclip,
+  Send,
+  Smile,
+} from 'lucide-react'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import MentionTextarea, { MentionMember } from './mention-textarea'
@@ -39,6 +47,9 @@ const renderMessage = (content: string, own: boolean) =>
 type ChatMessage = {
   id: string
   content: string
+  attachmentUrl: string | null
+  attachmentName: string | null
+  attachmentType: string | null
   createdAt: Date
   userId: string | null
   isOwn: boolean
@@ -50,12 +61,66 @@ type ChatMessage = {
   } | null
 }
 
+type PendingAttachment = {
+  url: string
+  name: string
+  type: string
+  previewUrl?: string
+}
+
 const EMOJIS = ['😀', '😂', '🔥', '👍', '🎉', '❤️', '🚀', '👀', '✅', '💡', '🙌', '😎']
+
+const AttachmentPreview = ({
+  url,
+  name,
+  type,
+  own,
+}: {
+  url: string
+  name: string
+  type: string | null
+  own?: boolean
+}) => {
+  const isImage = type?.startsWith('image/')
+  if (isImage) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={name}
+        className="mt-2 max-h-48 w-full max-w-full rounded-lg object-contain"
+      />
+    )
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        'mt-2 flex max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs',
+        own
+          ? 'border-white/30 bg-white/10 text-white hover:bg-white/20'
+          : 'border-border bg-background text-foreground hover:bg-accent'
+      )}
+    >
+      {type?.includes('pdf') ? (
+        <FileText className="h-4 w-4 shrink-0" />
+      ) : (
+        <FileIcon className="h-4 w-4 shrink-0" />
+      )}
+      <span className="min-w-0 break-all">{name}</span>
+    </a>
+  )
+}
 
 const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
   const [value, setValue] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const { data, refetch } = useQuery({
     queryKey: ['workspace-messages', workspaceId],
@@ -82,16 +147,19 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
 
   const submitMessage = async () => {
     const content = value.trim()
-    if (!content || isSending) return
+    if ((!content && !pendingAttachment) || isSending) return
     setIsSending(true)
+    const attachment = pendingAttachment
     setValue('')
-    const result = await sendWorkspaceMessage(workspaceId, content)
+    setPendingAttachment(null)
+    const result = await sendWorkspaceMessage(workspaceId, content, attachment)
     setIsSending(false)
     if (result.status === 200) {
       await refetch()
     } else {
       toast(typeof result.data === 'string' ? result.data : 'Failed to send')
       setValue(content)
+      setPendingAttachment(attachment)
     }
   }
 
@@ -104,8 +172,30 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
     setValue((prev) => prev + emoji)
   }
 
+  const onFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append('workspaceId', workspaceId)
+    formData.append('file', file)
+    const result = await uploadChatAttachment(formData)
+    setIsUploading(false)
+    e.target.value = ''
+    if (result.status === 200 && result.data) {
+      setPendingAttachment({
+        ...result.data,
+        previewUrl: file.type.startsWith('image/')
+          ? URL.createObjectURL(file)
+          : undefined,
+      })
+    } else {
+      toast('Failed to upload attachment')
+    }
+  }
+
   return (
-    <div className="flex h-[calc(100vh-320px)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm animate-fade-in">
+    <div className="flex h-[calc(100vh-320px)] min-h-[420px] w-full max-w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm animate-fade-in">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2.5 w-2.5">
@@ -117,7 +207,7 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
         <span className="text-xs text-muted-foreground">Live</span>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7C3AED]/10 text-2xl">
@@ -137,7 +227,7 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
               <div
                 key={message.id}
                 className={cn(
-                  'flex items-end gap-2.5',
+                  'flex w-full min-w-0 items-end gap-2.5',
                   message.isOwn ? 'flex-row-reverse' : 'flex-row'
                 )}
               >
@@ -156,13 +246,13 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
                 )}
                 <div
                   className={cn(
-                    'max-w-[75%] space-y-1',
+                    'min-w-0 max-w-[min(85%,100%)] space-y-1',
                     message.isOwn ? 'items-end text-right' : 'items-start'
                   )}
                 >
                   <div
                     className={cn(
-                      'inline-block rounded-2xl px-4 py-2 text-sm shadow-sm',
+                      'inline-block max-w-full rounded-2xl px-4 py-2 text-sm shadow-sm',
                       message.isOwn
                         ? 'rounded-br-sm bg-[#7C3AED] text-white'
                         : 'rounded-bl-sm bg-muted text-foreground'
@@ -173,9 +263,19 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
                         {name}
                       </p>
                     )}
-                    <p className="whitespace-pre-wrap break-words">
-                      {renderMessage(message.content, message.isOwn)}
-                    </p>
+                    {message.content && (
+                      <p className="chat-message whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                        {renderMessage(message.content, message.isOwn)}
+                      </p>
+                    )}
+                    {message.attachmentUrl && (
+                      <AttachmentPreview
+                        url={message.attachmentUrl}
+                        name={message.attachmentName ?? 'Attachment'}
+                        type={message.attachmentType}
+                        own={message.isOwn}
+                      />
+                    )}
                   </div>
                   <p className="px-1 text-[10px] text-muted-foreground">
                     {formatRelativeTime(message.createdAt)}
@@ -185,23 +285,39 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
             )
           })
         )}
-
-        {/* Typing indicator placeholder (ready for realtime integration) */}
-        <div className="hidden items-center gap-2" data-typing-indicator>
-          <div className="flex items-center gap-1 rounded-full bg-muted px-3 py-2">
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
-          </div>
-        </div>
-
         <div ref={bottomRef} />
       </div>
 
+      {pendingAttachment && (
+        <div className="border-t border-border px-4 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">
+            <span className="min-w-0 truncate text-xs text-foreground">
+              {pendingAttachment.name}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 shrink-0 text-xs"
+              onClick={() => setPendingAttachment(null)}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={onSend}
-        className="flex items-center gap-2 border-t border-border px-4 py-3"
+        className="flex items-center gap-2 border-t border-border px-3 py-3 sm:px-4"
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.md"
+          onChange={onFileSelect}
+        />
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -235,14 +351,18 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
           size="icon"
           variant="ghost"
           className="h-9 w-9 shrink-0 text-muted-foreground"
-          aria-label="Attach image (coming soon)"
-          title="Image attachments coming soon"
-          onClick={() => toast('Image attachments coming soon')}
+          aria-label="Attach file"
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()}
         >
-          <ImageIcon className="h-5 w-5" />
+          {isUploading ? (
+            <Paperclip className="h-5 w-5 animate-pulse" />
+          ) : (
+            <ImageIcon className="h-5 w-5" />
+          )}
         </Button>
 
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <MentionTextarea
             value={value}
             onChange={setValue}
@@ -250,7 +370,7 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
             rows={1}
             onEnter={submitMessage}
             placeholder="Type a message... use @ to mention"
-            className="rounded-2xl bg-muted/40"
+            className="w-full rounded-2xl bg-muted/40"
           />
         </div>
 
@@ -258,7 +378,7 @@ const WorkspaceChat = ({ workspaceId }: { workspaceId: string }) => {
           type="submit"
           size="icon"
           className="btn-clipflow h-9 w-9 shrink-0 rounded-full"
-          disabled={!value.trim() || isSending}
+          disabled={(!value.trim() && !pendingAttachment) || isSending || isUploading}
           aria-label="Send message"
         >
           <Send className="h-4 w-4" />

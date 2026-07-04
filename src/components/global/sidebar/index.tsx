@@ -1,33 +1,23 @@
 'use client'
 import { getWorkSpaces } from '@/actions/workspace'
+import { BrandLogo } from '@/components/website/brand-logo'
 import { Separator } from '@/components/ui/separator'
 
 import { WorkspaceProps } from '@/types/index.type'
-import { CLIPFLOW_LOGO } from '@/components/website/brand-logo'
-import Image from 'next/image'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import React, { useEffect, useMemo } from 'react'
-import {
-  Activity,
-  BarChart3,
-  Home,
-  Library,
-  ListTodo,
-  Menu,
-  Users,
-} from 'lucide-react'
+import { Home, Library, Menu, Users } from 'lucide-react'
 import SidebarItem from './sidebar-item'
 import { useQueryData } from '@/hooks/useQueryData'
 import WorkspaceSection from '../workspace/workspace-section'
 import GlobalCard from '../global-card'
-import WorkspaceAvatar from '../workspace/workspace-avatar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import InfoBar from '../info-bar'
 import { useDispatch } from 'react-redux'
 import { WORKSPACES } from '@/redux/slices/workspaces'
 import PaymentButton from '../payment-button'
-import { useUser } from '@clerk/nextjs'
+import { getJoinedWorkspaces } from '@/actions/collab-workspace'
 
 type Props = {
   activeWorkspaceId: string
@@ -35,38 +25,40 @@ type Props = {
 
 const Sidebar = ({ activeWorkspaceId }: Props) => {
   const pathName = usePathname()
-  const searchParams = useSearchParams()
   const dispatch = useDispatch()
-  const { user } = useUser()
 
   const { data, isFetched } = useQueryData(['user-workspaces'], getWorkSpaces)
+  const { data: joinedData } = useQueryData(
+    ['joined-workspaces'],
+    getJoinedWorkspaces
+  )
 
-  const { data: workspace } = data as WorkspaceProps
+  const workspacePayload = (data as WorkspaceProps | undefined)?.data ?? {
+    workspace: [],
+    members: [],
+    subscription: null,
+  }
 
   useEffect(() => {
-    if (isFetched && workspace) {
-      dispatch(WORKSPACES({ workspaces: workspace.workspace }))
+    if (isFetched && workspacePayload.workspace.length) {
+      dispatch(WORKSPACES({ workspaces: workspacePayload.workspace }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetched])
 
-  const currentWorkspace = workspace.workspace.find(
+  const currentWorkspace = workspacePayload.workspace.find(
     (s) => s.id === activeWorkspaceId
   )
+  const joinedWorkspaces =
+    (joinedData as { data: { id: string; isOwner?: boolean }[] } | undefined)
+      ?.data ?? []
+  const joinedMatch = joinedWorkspaces.find((w) => w.id === activeWorkspaceId)
 
-  const isOwner = Boolean(currentWorkspace)
-  const workspaceName =
-    currentWorkspace?.name ??
-    workspace.members.find((m) => m.WorkSpace?.id === activeWorkspaceId)
-      ?.WorkSpace?.name ??
-    'Workspace'
-  const role = isOwner ? 'Owner' : 'Member'
+  const role: 'Owner' | 'Member' =
+    currentWorkspace || joinedMatch?.isOwner ? 'Owner' : 'Member'
 
-  const userName = user?.fullName || user?.firstName || 'Your account'
-
-  const tab = searchParams.get('tab')
   const base = `/dashboard/${activeWorkspaceId}`
-  const isWorkspaceRoute = pathName === `${base}/workspace`
+  const isWorkspaceRoute = pathName.startsWith(`${base}/workspace`)
 
   const menuItems = useMemo(
     () => [
@@ -80,77 +72,22 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
         title: 'Library',
         href: base,
         icon: <Library />,
-        active: pathName === base,
+        active: pathName === base || pathName.includes('/folder/'),
       },
       {
         title: 'Workspace',
         href: `${base}/workspace`,
         icon: <Users />,
-        active: isWorkspaceRoute && (!tab || tab === 'overview'),
-      },
-      {
-        title: 'Tasks',
-        href: `${base}/workspace?tab=tasks`,
-        icon: <ListTodo />,
-        active: isWorkspaceRoute && tab === 'tasks',
-      },
-      {
-        title: 'Analytics',
-        href: `${base}/workspace?tab=analytics`,
-        icon: <BarChart3 />,
-        active: isWorkspaceRoute && tab === 'analytics',
-      },
-      {
-        title: 'Activity',
-        href: `${base}/workspace?tab=activity`,
-        icon: <Activity />,
-        active: isWorkspaceRoute && tab === 'activity',
+        active: isWorkspaceRoute,
       },
     ],
-    [base, pathName, isWorkspaceRoute, tab]
+    [base, pathName, isWorkspaceRoute]
   )
 
   const SidebarSection = (
-    <div className="bg-card flex-none relative p-4 h-full w-[250px] flex flex-col gap-4 items-center overflow-hidden border-r border-border">
-      <div className="bg-card p-4 flex gap-2 justify-center items-center mb-2 absolute top-0 left-0 right-0 z-10">
-        <Image
-          src={CLIPFLOW_LOGO}
-          height={36}
-          width={36}
-          alt="ClipFlow logo"
-          className="object-contain"
-        />
-        <p className="text-xl font-bold clipflow-gradient-text">ClipFlow</p>
-      </div>
-
-      <div className="mt-16 flex w-full items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
-        {user?.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.imageUrl}
-            alt={userName}
-            className="h-10 w-10 shrink-0 rounded-full object-cover"
-          />
-        ) : (
-          <WorkspaceAvatar
-            name={userName}
-            className="h-10 w-10 shrink-0 rounded-full text-sm"
-          />
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {userName}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {workspaceName}
-          </p>
-        </div>
-        <span
-          className="shrink-0 rounded-full bg-[#7C3AED]/10 px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED]"
-          title="Your role in this workspace"
-        >
-          {role}
-        </span>
+    <div className="bg-card flex h-full w-[250px] flex-none flex-col items-center gap-4 overflow-hidden border-r border-border p-4">
+      <div className="mb-2 flex w-full items-center justify-center pt-2">
+        <BrandLogo textClassName="text-xl" />
       </div>
 
       <nav className="w-full">
@@ -171,7 +108,7 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
       <WorkspaceSection />
       <Separator className="w-4/5" />
 
-      {workspace.subscription?.plan === 'FREE' && (
+      {workspacePayload.subscription?.plan === 'FREE' && (
         <GlobalCard
           title="Upgrade to Pro"
           description=" Unlock AI features like transcription, AI summary, and more."
@@ -183,20 +120,20 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
 
   return (
     <div className="full">
-      <InfoBar workspaceId={activeWorkspaceId} />
-      <div className="md:hidden fixed my-4">
+      <InfoBar workspaceId={activeWorkspaceId} role={role} />
+      <div className="fixed my-4 md:hidden">
         <Sheet>
           <SheetTrigger asChild className="ml-2">
-            <Button variant={'ghost'} className="mt-[2px]">
+            <Button variant="ghost" className="mt-[2px]">
               <Menu />
             </Button>
           </SheetTrigger>
-          <SheetContent side={'left'} className="p-0 w-fit h-full">
+          <SheetContent side="left" className="h-full w-fit p-0">
             {SidebarSection}
           </SheetContent>
         </Sheet>
       </div>
-      <div className="md:block hidden h-full">{SidebarSection}</div>
+      <div className="hidden h-full md:block">{SidebarSection}</div>
     </div>
   )
 }

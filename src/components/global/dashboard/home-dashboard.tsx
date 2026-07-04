@@ -1,10 +1,10 @@
 'use client'
 
 import StatCard from '@/components/global/dashboard/stat-card'
+import { DesktopAppLauncher, DesktopDownloadLink } from '@/components/global/desktop-app-launcher'
 import VideoCard from '@/components/global/videos/video-card'
 import { Empty } from '@/components/icons/empty'
 import { Button } from '@/components/ui/button'
-import { DESKTOP_APP_DOWNLOAD_URL } from '@/constants/app'
 import { useCreateFolders } from '@/hooks/useCreateFolder'
 import { cn } from '@/lib/utils'
 import {
@@ -14,11 +14,9 @@ import {
   HardDrive,
   LayoutGrid,
   Video,
-  Video as VideoRecord,
 } from 'lucide-react'
 import Link from 'next/link'
 import React from 'react'
-import { toast } from 'sonner'
 
 type DashboardStats = {
   totalVideos: number
@@ -85,13 +83,6 @@ const HomeDashboard = ({ workspaceId, userName, stats, recentVideos }: Props) =>
     },
   ]
 
-  const onRecordScreen = () => {
-    toast('Start recording in the ClipFlow desktop app', {
-      description: 'Download or open the desktop app to capture your screen.',
-    })
-    window.open(DESKTOP_APP_DOWNLOAD_URL, '_blank', 'noopener,noreferrer')
-  }
-
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 animate-fade-in">
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-[#7C3AED]/15 via-card/70 to-card/40 p-8 shadow-sm backdrop-blur-xl md:p-10">
@@ -128,32 +119,19 @@ const HomeDashboard = ({ workspaceId, userName, stats, recentVideos }: Props) =>
             <span>Create Folder</span>
           </Button>
 
-          <Button
-            onClick={onRecordScreen}
-            className="glass-card h-auto flex-col gap-3 px-6 py-8 text-base hover:-translate-y-1 hover:border-[#7C3AED]/40 hover:shadow-lg"
-            variant="ghost"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
-              <VideoRecord className="h-6 w-6" />
-            </span>
-            <span>Record Screen</span>
-          </Button>
+          <DesktopAppLauncher />
 
           <Button
             asChild
             className="glass-card h-auto flex-col gap-3 px-6 py-8 text-base hover:-translate-y-1 hover:border-[#7C3AED]/40 hover:shadow-lg"
             variant="ghost"
           >
-            <a
-              href={DESKTOP_APP_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <DesktopDownloadLink className="flex flex-col items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
                 <Download className="h-6 w-6" />
               </span>
               <span>Download Desktop App</span>
-            </a>
+            </DesktopDownloadLink>
           </Button>
         </div>
       </section>
@@ -187,23 +165,17 @@ const HomeDashboard = ({ workspaceId, userName, stats, recentVideos }: Props) =>
               <Empty />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">
-                No videos yet
-              </h3>
+              <h3 className="text-lg font-semibold text-foreground">No videos yet</h3>
               <p className="max-w-md text-sm text-muted-foreground">
                 Record with the desktop app to see your latest videos here.
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Button asChild className="btn-clipflow gap-2">
-                <a
-                  href={DESKTOP_APP_DOWNLOAD_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <DesktopDownloadLink>
                   <Download className="h-4 w-4" />
                   Download Desktop App
-                </a>
+                </DesktopDownloadLink>
               </Button>
               <Button asChild variant="outline" className="btn-clipflow-outline gap-2">
                 <Link href={`/dashboard/${workspaceId}`}>Go to My Library</Link>

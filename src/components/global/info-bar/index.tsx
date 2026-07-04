@@ -1,38 +1,36 @@
+import UserProfileChip from '@/components/global/dashboard/user-profile-chip'
+import { DesktopDownloadLink } from '@/components/global/desktop-app-launcher'
 import { ThemeToggle } from '@/components/website/theme-toggle'
 import { UserButton } from '@clerk/nextjs'
-import { Download, Settings } from 'lucide-react'
-import Link from 'next/link'
+import { Download } from 'lucide-react'
 import React from 'react'
 import NotificationBell from '../notifications/notification-bell'
 import WorkspaceSearch from '../workspace/workspace-search'
-import { DESKTOP_APP_DOWNLOAD_URL } from '@/constants/app'
 
 const iconButton =
   'flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground'
 
-const InfoBar = ({ workspaceId }: { workspaceId: string }) => {
+type Props = {
+  workspaceId: string
+  role: 'Owner' | 'Member'
+}
+
+const InfoBar = ({ workspaceId, role }: Props) => {
   return (
-    <header className="fixed z-40 flex w-full items-center justify-between gap-4 border-b border-border bg-background/80 p-4 pl-20 backdrop-blur-xl md:pl-[265px]">
-      <div className="flex w-full max-w-lg">
-        <WorkspaceSearch workspaceId={workspaceId} />
+    <header className="fixed z-40 flex w-full items-center justify-between gap-3 border-b border-border bg-background/80 p-3 pl-16 backdrop-blur-xl sm:gap-4 sm:p-4 md:pl-[265px]">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <UserProfileChip role={role} className="hidden shrink-0 md:flex" />
+        <div className="min-w-0 flex-1 max-w-lg">
+          <WorkspaceSearch workspaceId={workspaceId} />
+        </div>
       </div>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <a
-          href={DESKTOP_APP_DOWNLOAD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <DesktopDownloadLink
           className={`${iconButton} hidden sm:flex`}
-          title="Download Desktop App"
+          aria-label="Download Desktop App"
         >
           <Download className="h-4 w-4" />
-        </a>
-        <Link
-          href={`/dashboard/${workspaceId}/settings`}
-          className={iconButton}
-          title="Settings"
-        >
-          <Settings className="h-4 w-4" />
-        </Link>
+        </DesktopDownloadLink>
         <NotificationBell />
         <ThemeToggle />
         <UserButton />

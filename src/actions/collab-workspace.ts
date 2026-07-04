@@ -1,6 +1,8 @@
 'use server'
 
 import { client } from '@/lib/prisma'
+import { mkdir, writeFile } from 'fs/promises'
+import path from 'path'
 import {
   createNotification,
   getCurrentDbUser,
@@ -179,7 +181,7 @@ export const getJoinedWorkspaces = async () => {
         name: ws.name,
         inviteCode: ws.inviteCode,
         isOwner: ws.userId === dbUser.id,
-        memberCount: ws._count.members,
+        memberCount: Math.max(ws._count.members, ws.userId ? 1 : 0),
         videoCount: ws._count.videos + ws._count.sharedVideos,
         lastActivity,
       }
@@ -546,6 +548,9 @@ export const getWorkspaceMessages = async (workspaceId: string) => {
       select: {
         id: true,
         content: true,
+        attachmentUrl: true,
+        attachmentName: true,
+        attachmentType: true,
         createdAt: true,
         userId: true,
         User: {
@@ -569,9 +574,48 @@ export const getWorkspaceMessages = async (workspaceId: string) => {
   }
 }
 
+export const uploadChatAttachment = async (formData: FormData) => {
+  try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 403, data: null }
+
+    const workspaceId = formData.get('workspaceId') as string
+    const file = formData.get('file') as File | null
+    if (!workspaceId || !file) return { status: 400, data: null }
+
+    const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
+    if (!allowed) return { status: 403, data: null }
+
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'chat')
+    await mkdir(uploadDir, { recursive: true })
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const filename = `${Date.now()}-${safeName}`
+    await writeFile(path.join(uploadDir, filename), buffer)
+
+    return {
+      status: 200,
+      data: {
+        url: `/uploads/chat/${filename}`,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      },
+    }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: null }
+  }
+}
+
 export const sendWorkspaceMessage = async (
   workspaceId: string,
-  content: string
+  content: string,
+  attachment?: {
+    url: string
+    name: string
+    type: string
+  } | null
 ) => {
   try {
     const dbUser = await getCurrentDbUser()
@@ -581,13 +625,16 @@ export const sendWorkspaceMessage = async (
     if (!allowed) return { status: 403, data: 'You are not a member of this workspace' }
 
     const trimmed = content.trim()
-    if (!trimmed) return { status: 400, data: 'Message cannot be empty' }
+    if (!trimmed && !attachment) return { status: 400, data: 'Message cannot be empty' }
 
     const message = await client.message.create({
       data: {
-        content: trimmed,
+        content: trimmed || attachment?.name || 'Attachment',
         userId: dbUser.id,
         workSpaceId: workspaceId,
+        attachmentUrl: attachment?.url ?? null,
+        attachmentName: attachment?.name ?? null,
+        attachmentType: attachment?.type ?? null,
       },
       select: { id: true },
     })

@@ -81,7 +81,7 @@ const WorkspaceDashboard = (props: Props) => {
         <WorkspaceAvatar name={props.name} className="h-16 w-16 text-2xl" />
         <div className="flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-[#7C3AED]">
-            Public Workspace
+            Private Workspace
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
             {props.name}
@@ -94,7 +94,7 @@ const WorkspaceDashboard = (props: Props) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+        <TabsList className="flex h-auto w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto bg-transparent p-0 pb-1 scrollbar-thin">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab}

@@ -5,6 +5,7 @@ import {
 import CreateFolders from '@/components/global/create-folder'
 import CreateWorkspace from '@/components/global/create-workspace'
 import Folders from '@/components/global/folders'
+import ArchivedLibrary from '@/components/global/folders/archived-library'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   dehydrate,
@@ -61,6 +62,9 @@ const Page = async ({ params: { workspaceId } }: Props) => {
           <section className="py-9">
             <TabsContent value="videos">
               <Folders workspaceId={workspaceId} />
+            </TabsContent>
+            <TabsContent value="archive">
+              <ArchivedLibrary workspaceId={workspaceId} />
             </TabsContent>
           </section>
         </Tabs>

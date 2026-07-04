@@ -8,23 +8,35 @@ type Props = {
   workspace: WorkSpace
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  home: 'Home',
+  workspace: 'Workspace',
+  settings: 'Settings',
+  billing: 'Billing',
+  notifications: 'Notifications',
+}
+
 const GlobalHeader = ({ workspace }: Props) => {
-  //Pathname
-  const pathName = usePathname().split(`/dashboard/${workspace.id}`)[1]
+  const pathName = usePathname().split(`/dashboard/${workspace.id}`)[1] ?? ''
+
+  const segment = pathName.replace(/^\//, '').split('/')[0]?.split('?')[0] ?? ''
+
+  if (pathName.includes('video') || pathName.includes('folder')) {
+    return null
+  }
+
+  const title =
+    segment === '' || segment === 'home'
+      ? segment === 'home'
+        ? 'Home'
+        : 'My Library'
+      : PAGE_TITLES[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
+
   return (
     <article className="flex flex-col gap-2">
-      <span className="text-muted-foreground text-xs">
-        {pathName.includes('video') ? '' : workspace.type.toLocaleUpperCase()}
-      </span>
-      <h1 className="text-4xl font-bold">
-        {pathName && !pathName.includes('folder') && !pathName.includes('video')
-          ? pathName.charAt(1).toUpperCase() + pathName.slice(2).toLowerCase()
-          : pathName.includes('video')
-          ? ''
-          : 'My Library'}
-      </h1>
+      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h1>
     </article>
   )
 }
 
-export default GlobalHeader
+export default React.memo(GlobalHeader)

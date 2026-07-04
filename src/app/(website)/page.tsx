@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LandingContactSection } from '@/components/website/landing-contact'
 
 const features = [
   {
@@ -54,7 +55,7 @@ export default function Home() {
     <main className="overflow-hidden">
       <section className="relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="animate-slide-up space-y-8">
-          <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Record.
             <br />
             Upload.
@@ -73,7 +74,7 @@ export default function Home() {
                 Get Started
               </Button>
             </Link>
-            <Link href="/pricing">
+            <Link href="/#features">
               <Button size="lg" variant="outline" className="btn-clipflow-outline h-12 px-8 text-base">
                 Learn More
               </Button>
@@ -96,9 +97,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-24">
+      <section id="features" className="mt-24 scroll-mt-28">
         <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Everything you need to create and share</h2>
+          <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+            Everything you need to create and share
+          </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             From recording on desktop to sharing with your team, ClipFlow keeps your workflow fast,
             secure, and beautifully simple.
@@ -115,7 +118,7 @@ export default function Home() {
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#7C3AED]/15 text-[#7C3AED] transition-colors group-hover:bg-[#7C3AED] group-hover:text-white">
                 <feature.icon className="h-6 w-6" />
               </div>
-              <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
+              <h3 className="mb-2 text-lg font-semibold text-foreground">{feature.title}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {feature.description}
               </p>
@@ -123,6 +126,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <LandingContactSection />
     </main>
   )
 }

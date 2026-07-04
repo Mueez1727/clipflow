@@ -6,18 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Menu, User } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/pricing', label: 'Pricing' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/#features', label: 'Features' },
+  { href: '/#contact', label: 'Contact' },
 ]
 
 export default function LandingPageNavBar() {
-  const pathname = usePathname()
-
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {navLinks.map((link) => (
@@ -25,8 +21,7 @@ export default function LandingPageNavBar() {
           key={link.href}
           href={link.href}
           className={cn(
-            'nav-link text-sm font-medium',
-            pathname === link.href && 'nav-link-active',
+            'nav-link text-sm font-medium text-foreground/80',
             mobile && 'block py-3 text-base'
           )}
         >

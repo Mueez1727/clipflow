@@ -32,7 +32,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useDeleteFolder } from '@/hooks/useDeleteFolder'
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { useArchiveFolder } from '@/hooks/useArchiveFolder'
+import { MoreVertical, Pencil, Trash2, Archive } from 'lucide-react'
 
 type Props = {
   name: string
@@ -73,6 +74,7 @@ const Folder = ({ id, name, optimistic, count }: Props) => {
   )
 
   const { deleteFolder, isPending: isDeleting } = useDeleteFolder()
+  const { archiveFolder, isPending: isArchiving } = useArchiveFolder()
 
   const { latestVariables } = useMutationDataState(['rename-folders']) as {
     latestVariables?: {
@@ -125,6 +127,11 @@ const Folder = ({ id, name, optimistic, count }: Props) => {
     }
   }
 
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    archiveFolder({ id })
+  }
+
   const handleDeleteConfirm = () => {
     deleteFolder({ id })
     setDeleteDialogOpen(false)
@@ -157,6 +164,10 @@ const Folder = ({ id, name, optimistic, count }: Props) => {
                 <Pencil className="mr-2 h-4 w-4" />
                 Rename Folder
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleArchive}>
+                <Archive className="mr-2 h-4 w-4" />
+                Archive Folder
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={openDeleteDialog}
                 className="text-destructive focus:text-destructive"
@@ -168,7 +179,7 @@ const Folder = ({ id, name, optimistic, count }: Props) => {
           </DropdownMenu>
         )}
 
-        <Loader state={isPending || isDeleting}>
+        <Loader state={isPending || isDeleting || isArchiving}>
           <div className="flex items-start justify-between gap-3 pr-6">
             <div className="flex flex-col gap-1">
               {onRename ? (

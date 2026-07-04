@@ -56,6 +56,7 @@ export const getWorkspaceFolders = async (workSpaceId: string) => {
     const isFolders = await client.folder.findMany({
       where: {
         workSpaceId,
+        archived: false,
       },
       include: {
         _count: {
@@ -81,6 +82,7 @@ export const getAllUserVideos = async (workSpaceId: string) => {
     if (!user) return { status: 404 }
     const videos = await client.video.findMany({
       where: {
+        archived: false,
         OR: [{ workSpaceId }, { folderId: workSpaceId }],
       },
       select: {
@@ -247,7 +249,107 @@ export const deleteFolder = async (folderId: string) => {
   }
 }
 
+export const archiveFolder = async (folderId: string) => {
+  try {
+    const folder = await client.folder.update({
+      where: { id: folderId },
+      data: { archived: true },
+    })
+    if (folder) return { status: 200, data: 'Folder archived' }
+    return { status: 400, data: 'Folder does not exist' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
+  }
+}
+
+export const restoreFolder = async (folderId: string) => {
+  try {
+    const folder = await client.folder.update({
+      where: { id: folderId },
+      data: { archived: false },
+    })
+    if (folder) return { status: 200, data: 'Folder restored' }
+    return { status: 400, data: 'Folder does not exist' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
+  }
+}
+
+export const archiveVideo = async (videoId: string) => {
+  try {
+    const video = await client.video.update({
+      where: { id: videoId },
+      data: { archived: true },
+    })
+    if (video) return { status: 200, data: 'Video archived' }
+    return { status: 400, data: 'Video does not exist' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
+  }
+}
+
+export const restoreVideo = async (videoId: string) => {
+  try {
+    const video = await client.video.update({
+      where: { id: videoId },
+      data: { archived: false },
+    })
+    if (video) return { status: 200, data: 'Video restored' }
+    return { status: 400, data: 'Video does not exist' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
+  }
+}
+
+export const getArchivedFolders = async (workSpaceId: string) => {
+  try {
+    const folders = await client.folder.findMany({
+      where: { workSpaceId, archived: true },
+      include: {
+        _count: { select: { videos: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return { status: folders.length ? 200 : 404, data: folders }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: [] }
+  }
+}
+
+export const getArchivedVideos = async (workSpaceId: string) => {
+  try {
+    const videos = await client.video.findMany({
+      where: {
+        archived: true,
+        OR: [{ workSpaceId }, { folderId: workSpaceId }],
+      },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        source: true,
+        processing: true,
+        Folder: { select: { id: true, name: true } },
+        User: {
+          select: { firstname: true, lastname: true, image: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return { status: videos.length ? 200 : 404, data: videos }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: [] }
+  }
+}
+
 const workspaceVideoWhere = (workSpaceId: string) => ({
+  archived: false,
   OR: [{ workSpaceId }, { folderId: workSpaceId }],
 })
 
@@ -287,7 +389,7 @@ export const getDashboardStats = async (workSpaceId: string) => {
     const [totalVideos, totalFolders, videosProcessed, workspaceCount] =
       await Promise.all([
         client.video.count({ where: videoWhere }),
-        client.folder.count({ where: { workSpaceId } }),
+        client.folder.count({ where: { workSpaceId, archived: false } }),
         client.video.count({ where: { ...videoWhere, processing: false } }),
         dbUser
           ? client.workSpace.count({

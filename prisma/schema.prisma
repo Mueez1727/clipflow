@@ -88,6 +88,7 @@ model WorkSpace {
 model Folder {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String     @default("Untitled Folder")
+  archived    Boolean    @default(false)
   createdAt   DateTime   @default(now())
   workSpaceId String?    @db.Uuid
   WorkSpace   WorkSpace? @relation(fields: [workSpaceId], references: [id])
@@ -99,6 +100,7 @@ model Video {
   title       String?       @default("Untilted Video")
   description String?       @default("No Description")
   source      String        @unique
+  archived    Boolean       @default(false)
   createdAt   DateTime      @default(now())
   folderId    String?       @db.Uuid
   userId      String?       @db.Uuid
@@ -116,13 +118,16 @@ model Video {
 }
 
 model Message {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  content     String
-  userId      String?    @db.Uuid
-  workSpaceId String?    @db.Uuid
-  createdAt   DateTime   @default(now())
-  User        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  WorkSpace   WorkSpace? @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content        String
+  attachmentUrl  String?
+  attachmentName String?
+  attachmentType String?
+  userId         String?    @db.Uuid
+  workSpaceId    String?    @db.Uuid
+  createdAt      DateTime   @default(now())
+  User           User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  WorkSpace      WorkSpace? @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
 }
 
 model SharedVideo {
