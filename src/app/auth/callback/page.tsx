@@ -5,10 +5,9 @@ export const dynamic = 'force-dynamic'
 
 const AuthCallbackPage = async () => {
   const auth = await onAuthenticateUser()
-  console.log(auth)
   if (auth.status === 200 || auth.status === 201) {
     const workspaceId = auth.user?.workspace?.[0]?.id
-    if (workspaceId) return redirect(`/dashboard/${workspaceId}`)
+    if (workspaceId) return redirect(`/dashboard/${workspaceId}/home`)
     return redirect('/auth/sign-in')
   }
 

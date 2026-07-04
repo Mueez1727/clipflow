@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: Props) {
           Sign in to your ClipFlow workspace
         </p>
       </div>
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card/80 p-2 shadow-xl backdrop-blur-xl">
+      <div className="relative z-10 flex w-full max-w-md flex-col items-center rounded-2xl border border-border bg-card/80 px-2 py-4 shadow-xl backdrop-blur-xl sm:px-4 sm:py-6">
         {children}
       </div>
       <div className="relative z-10 mt-8 flex items-center gap-2 text-xs text-muted-foreground">

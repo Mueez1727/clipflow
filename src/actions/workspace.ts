@@ -269,12 +269,33 @@ const videoListSelect = {
 
 export const getDashboardStats = async (workSpaceId: string) => {
   try {
+    const user = await currentUser()
     const videoWhere = workspaceVideoWhere(workSpaceId)
-    const [totalVideos, totalFolders, videosProcessed] = await Promise.all([
-      client.video.count({ where: videoWhere }),
-      client.folder.count({ where: { workSpaceId } }),
-      client.video.count({ where: { ...videoWhere, processing: false } }),
-    ])
+
+    const dbUser = user
+      ? await client.user.findUnique({
+          where: { clerkid: user.id },
+          select: { id: true },
+        })
+      : null
+
+    const [totalVideos, totalFolders, videosProcessed, workspaceCount] =
+      await Promise.all([
+        client.video.count({ where: videoWhere }),
+        client.folder.count({ where: { workSpaceId } }),
+        client.video.count({ where: { ...videoWhere, processing: false } }),
+        dbUser
+          ? client.workSpace.count({
+              where: {
+                type: 'PUBLIC',
+                OR: [
+                  { userId: dbUser.id },
+                  { members: { some: { userId: dbUser.id } } },
+                ],
+              },
+            })
+          : Promise.resolve(0),
+      ])
 
     return {
       status: 200,
@@ -282,6 +303,7 @@ export const getDashboardStats = async (workSpaceId: string) => {
         totalVideos,
         totalFolders,
         videosProcessed,
+        workspaceCount,
         storageUsed: null as string | null,
       },
     }
@@ -293,6 +315,7 @@ export const getDashboardStats = async (workSpaceId: string) => {
         totalVideos: 0,
         totalFolders: 0,
         videosProcessed: 0,
+        workspaceCount: 0,
         storageUsed: null as string | null,
       },
     }

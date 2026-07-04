@@ -1,0 +1,147 @@
+'use client'
+
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Users } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import React from 'react'
+import WorkspaceAvatar from './workspace-avatar'
+
+const TabSkeleton = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-28 w-full rounded-2xl" />
+    <Skeleton className="h-64 w-full rounded-2xl" />
+  </div>
+)
+
+const WorkspaceOverview = dynamic(() => import('./workspace-overview'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceVideos = dynamic(() => import('./workspace-videos'), {
+  loading: () => <TabSkeleton />,
+})
+const TaskBoard = dynamic(() => import('./task-board'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceAnalytics = dynamic(() => import('./workspace-analytics'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceActivity = dynamic(() => import('./workspace-activity'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceMembers = dynamic(() => import('./workspace-members'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceChat = dynamic(() => import('./workspace-chat'), {
+  loading: () => <TabSkeleton />,
+})
+const WorkspaceSettings = dynamic(() => import('./workspace-settings'), {
+  loading: () => <TabSkeleton />,
+})
+
+type Props = {
+  workspaceId: string
+  name: string
+  inviteCode: string | null
+  isOwner: boolean
+  createdAt: Date
+  memberCount: number
+}
+
+const TABS = [
+  'overview',
+  'videos',
+  'tasks',
+  'analytics',
+  'activity',
+  'members',
+  'chat',
+  'settings',
+] as const
+
+const WorkspaceDashboard = (props: Props) => {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const requested = searchParams.get('tab')
+  const activeTab = (TABS as readonly string[]).includes(requested ?? '')
+    ? (requested as string)
+    : 'overview'
+
+  const onTabChange = (value: string) => {
+    const query = value === 'overview' ? '' : `?tab=${value}`
+    router.replace(`${pathname}${query}`, { scroll: false })
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6 animate-fade-in">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-[#7C3AED]/10 via-card to-card p-6 shadow-sm sm:flex-row sm:items-center">
+        <WorkspaceAvatar name={props.name} className="h-16 w-16 text-2xl" />
+        <div className="flex-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-[#7C3AED]">
+            Public Workspace
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+            {props.name}
+          </h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Users className="h-4 w-4" />
+            {props.memberCount} {props.memberCount === 1 ? 'member' : 'members'}
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+          {TABS.map((tab) => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="rounded-full border border-transparent px-5 py-2 capitalize data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-[#7C3AED]"
+            >
+              {tab}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <div className="mt-6">
+          <TabsContent value="overview">
+            <WorkspaceOverview workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="videos">
+            <WorkspaceVideos workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="tasks">
+            <TaskBoard workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <WorkspaceAnalytics workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="activity">
+            <WorkspaceActivity workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="members">
+            <WorkspaceMembers workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="chat">
+            <WorkspaceChat workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="settings">
+            <WorkspaceSettings
+              workspaceId={props.workspaceId}
+              name={props.name}
+              inviteCode={props.inviteCode}
+              isOwner={props.isOwner}
+              createdAt={props.createdAt}
+              memberCount={props.memberCount}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  )
+}
+
+export default WorkspaceDashboard

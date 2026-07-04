@@ -37,4 +37,4 @@ const StatCard = ({ title, value, icon: Icon, gradient, iconColor }: Props) => {
   )
 }
 
-export default StatCard
+export default React.memo(StatCard)

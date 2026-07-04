@@ -1,30 +1,39 @@
-import VideoRecorderIcon from '@/components/icons/video-recorder'
 import { ThemeToggle } from '@/components/website/theme-toggle'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { UserButton } from '@clerk/nextjs'
-import { Search, UploadIcon } from 'lucide-react'
+import { Download, Settings } from 'lucide-react'
+import Link from 'next/link'
 import React from 'react'
+import NotificationBell from '../notifications/notification-bell'
+import WorkspaceSearch from '../workspace/workspace-search'
+import { DESKTOP_APP_DOWNLOAD_URL } from '@/constants/app'
 
-const InfoBar = () => {
+const iconButton =
+  'flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground'
+
+const InfoBar = ({ workspaceId }: { workspaceId: string }) => {
   return (
     <header className="fixed z-40 flex w-full items-center justify-between gap-4 border-b border-border bg-background/80 p-4 pl-20 backdrop-blur-xl md:pl-[265px]">
-      <div className="flex w-full max-w-lg items-center justify-center gap-4 rounded-full border border-border bg-card px-4 shadow-sm transition-colors">
-        <Search size={20} className="shrink-0 text-muted-foreground" />
-        <Input
-          className="border-none bg-transparent placeholder:text-muted-foreground"
-          placeholder="Search for people, projects, tags & folders"
-        />
+      <div className="flex w-full max-w-lg">
+        <WorkspaceSearch workspaceId={workspaceId} />
       </div>
-      <div className="flex items-center gap-3">
-        <Button className="btn-clipflow hidden gap-2 sm:flex">
-          <UploadIcon size={18} />
-          <span>Upload</span>
-        </Button>
-        <Button className="btn-clipflow-outline hidden gap-2 sm:flex">
-          <VideoRecorderIcon />
-          <span>Record</span>
-        </Button>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <a
+          href={DESKTOP_APP_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${iconButton} hidden sm:flex`}
+          title="Download Desktop App"
+        >
+          <Download className="h-4 w-4" />
+        </a>
+        <Link
+          href={`/dashboard/${workspaceId}/settings`}
+          className={iconButton}
+          title="Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
+        <NotificationBell />
         <ThemeToggle />
         <UserButton />
       </div>

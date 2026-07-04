@@ -29,6 +29,7 @@ const Home = async ({ params: { workspaceId } }: Props) => {
           totalVideos: 0,
           totalFolders: 0,
           videosProcessed: 0,
+          workspaceCount: 0,
           storageUsed: null,
         }
 

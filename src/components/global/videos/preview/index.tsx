@@ -3,7 +3,7 @@ import { getPreviewVideo, sendEmailForFirstView } from '@/actions/workspace'
 import { useQueryData } from '@/hooks/useQueryData'
 import { VideoProps } from '@/types/index.type'
 import { useRouter } from 'next/navigation'
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import CopyLink from '../copy-link'
 import RichLink from '../rich-link'
 import { truncateString } from '@/lib/utils'
@@ -13,13 +13,25 @@ import AiTools from '../../ai-tools'
 import VideoTranscript from '../../video-transcript'
 import Activities from '../../activities'
 import EditVideo from '../edit'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const VideoComments = dynamic(
+  () => import('../../workspace/video-comments'),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-64 w-full rounded-2xl" />,
+  }
+)
 
 type Props = {
   videoId: string
+  workspaceId?: string
 }
 
-const VideoPreview = ({ videoId }: Props) => {
+const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const router = useRouter()
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   const { data } = useQueryData(['preview-video'], () =>
     getPreviewVideo(videoId)
@@ -79,8 +91,9 @@ const VideoPreview = ({ videoId }: Props) => {
           </span>
         </div>
         <video
+          ref={videoRef}
           preload="metadata"
-          className="w-full aspect-video opacity-50 rounded-xl"
+          className="w-full aspect-video rounded-xl"
           controls
         >
           <source
@@ -104,6 +117,13 @@ const VideoPreview = ({ videoId }: Props) => {
             {video.description}
           </p>
         </div>
+        {workspaceId && (
+          <VideoComments
+            videoId={videoId}
+            workspaceId={workspaceId}
+            videoRef={videoRef}
+          />
+        )}
       </div>
       <div className="lg:col-span-1 flex flex-col gap-y-16">
         <div className="flex justify-end gap-x-3 items-center">

@@ -1,20 +1,8 @@
 import React from 'react'
-import { SignIn } from '@clerk/nextjs'
-
-const clerkAppearance = {
-  variables: {
-    colorPrimary: '#7C3AED',
-    borderRadius: '0.75rem',
-  },
-  elements: {
-    card: 'shadow-none border-0 bg-transparent',
-    headerTitle: 'text-foreground',
-    headerSubtitle: 'text-muted-foreground',
-  },
-}
+import AuthWidget from '@/components/global/clerk/auth-widget'
 
 const SignInPage = () => {
-  return <SignIn appearance={clerkAppearance} />
+  return <AuthWidget mode="sign-in" />
 }
 
 export default SignInPage

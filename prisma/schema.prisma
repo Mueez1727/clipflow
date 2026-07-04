@@ -22,6 +22,12 @@ model User {
   sender                         Invite[]       @relation("sender")
   studio                         Media?
   members                        Member[]
+  messages                       Message[]
+  sharedVideos                   SharedVideo[]
+  videoComments                  VideoComment[]
+  commentReplies                 CommentReply[]
+  assignedTasks                  Task[]         @relation("TaskAssignee")
+  activities                     Activity[]
   notification                   Notification[]
   subscription                   Subscription?
   videos                         Video[]
@@ -62,16 +68,21 @@ model Media {
 }
 
 model WorkSpace {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type      Type
-  name      String
-  userId    String?  @db.Uuid
-  createdAt DateTime @default(now())
-  folders   Folder[]
-  invite    Invite[]
-  members   Member[]
-  videos    Video[]
-  User      User?    @relation(fields: [userId], references: [id])
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type         Type
+  name         String
+  userId       String?       @db.Uuid
+  inviteCode   String?       @unique
+  createdAt    DateTime      @default(now())
+  folders      Folder[]
+  invite       Invite[]
+  members      Member[]
+  messages     Message[]
+  sharedVideos SharedVideo[]
+  tasks        Task[]
+  activities   Activity[]
+  videos       Video[]
+  User         User?         @relation(fields: [userId], references: [id])
 }
 
 model Folder {
@@ -84,21 +95,51 @@ model Folder {
 }
 
 model Video {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String?    @default("Untilted Video")
-  description String?    @default("No Description")
-  source      String     @unique
-  createdAt   DateTime   @default(now())
-  folderId    String?    @db.Uuid
-  userId      String?    @db.Uuid
-  processing  Boolean    @default(true)
-  workSpaceId String?    @db.Uuid
-  views       Int        @default(0)
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String?       @default("Untilted Video")
+  description String?       @default("No Description")
+  source      String        @unique
+  createdAt   DateTime      @default(now())
+  folderId    String?       @db.Uuid
+  userId      String?       @db.Uuid
+  processing  Boolean       @default(true)
+  workSpaceId String?       @db.Uuid
+  views       Int           @default(0)
   summary     String?
   Comment     Comment[]
-  Folder      Folder?    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  sharedIn    SharedVideo[]
+  videoComments VideoComment[]
+  tasks       Task[]
+  Folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  User        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  WorkSpace   WorkSpace?    @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content     String
+  userId      String?    @db.Uuid
+  workSpaceId String?    @db.Uuid
+  createdAt   DateTime   @default(now())
   User        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   WorkSpace   WorkSpace? @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+}
+
+model SharedVideo {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  videoId      String        @db.Uuid
+  workSpaceId  String        @db.Uuid
+  sharedById   String?       @db.Uuid
+  pinned       Boolean       @default(false)
+  reviewStatus REVIEW_STATUS @default(PENDING)
+  reviewNote   String?
+  reviewedById String?       @db.Uuid
+  createdAt    DateTime      @default(now())
+  Video        Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  WorkSpace    WorkSpace     @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+  SharedBy     User?         @relation(fields: [sharedById], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, workSpaceId])
 }
 
 model Member {
@@ -112,10 +153,16 @@ model Member {
 }
 
 model Notification {
-  id      String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId  String? @db.Uuid
-  content String
-  User    User?   @relation(fields: [userId], references: [id])
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?  @db.Uuid
+  content     String
+  type        String?
+  read        Boolean  @default(false)
+  workSpaceId String?  @db.Uuid
+  actorId     String?  @db.Uuid
+  link        String?
+  createdAt   DateTime @default(now())
+  User        User?    @relation(fields: [userId], references: [id])
 }
 
 model Invite {
@@ -128,6 +175,80 @@ model Invite {
   User_Invite_receiverIdToUser User?      @relation("Invite_receiverIdToUser", fields: [receiverId], references: [id])
   sender                       User?      @relation("sender", fields: [senderId], references: [id])
   WorkSpace                    WorkSpace? @relation(fields: [workSpaceId], references: [id])
+}
+
+model VideoComment {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content     String
+  timestamp   Float?
+  videoId     String         @db.Uuid
+  workSpaceId String?        @db.Uuid
+  userId      String?        @db.Uuid
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+  Video       Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  User        User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies     CommentReply[]
+}
+
+model CommentReply {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content        String
+  videoCommentId String       @db.Uuid
+  userId         String?      @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+  VideoComment   VideoComment @relation(fields: [videoCommentId], references: [id], onDelete: Cascade)
+  User           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  description String?
+  status      TASK_STATUS   @default(TODO)
+  priority    TASK_PRIORITY @default(MEDIUM)
+  dueDate     DateTime?
+  order       Int           @default(0)
+  workSpaceId String        @db.Uuid
+  assigneeId  String?       @db.Uuid
+  videoId     String?       @db.Uuid
+  createdById String?       @db.Uuid
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+  WorkSpace   WorkSpace     @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+  Assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  Video       Video?        @relation(fields: [videoId], references: [id], onDelete: SetNull)
+}
+
+model Activity {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        String
+  content     String
+  workSpaceId String    @db.Uuid
+  userId      String?   @db.Uuid
+  videoId     String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  WorkSpace   WorkSpace @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+  User        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum TASK_STATUS {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TASK_PRIORITY {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum REVIEW_STATUS {
+  PENDING
+  NEEDS_CHANGES
+  APPROVED
 }
 
 enum Type {

@@ -98,6 +98,10 @@
     @apply rounded-xl border border-border bg-card shadow-sm transition-all duration-200;
   }
 
+  .glass-card {
+    @apply rounded-2xl border border-border/60 bg-card/60 shadow-sm backdrop-blur-xl transition-all duration-300;
+  }
+
   .nav-link {
     @apply relative text-muted-foreground transition-colors duration-200 hover:text-foreground;
   }

@@ -1,6 +1,8 @@
 import React from 'react'
-import { getNotifications, onAuthenticateUser } from '@/actions/user'
-import {  getAllUserVideos, getWorkspaceFolders, getWorkSpaces, verifyAccessToWorkspace } from '@/actions/workspace'
+import { onAuthenticateUser } from '@/actions/user'
+import { getWorkSpaces, verifyAccessToWorkspace } from '@/actions/workspace'
+import { getJoinedWorkspaces } from '@/actions/collab-workspace'
+import { getUnreadNotificationCount } from '@/actions/notifications'
 import { redirect } from 'next/navigation'
 import {
   dehydrate,
@@ -19,37 +21,34 @@ const Layout = async ({ params: { workspaceId }, children }: Props) => {
   const auth = await onAuthenticateUser()
   if (!auth.user?.workspace) redirect('/auth/sign-in')
   if (!auth.user.workspace.length) redirect('/auth/sign-in')
+
   const hasAccess = await verifyAccessToWorkspace(workspaceId)
 
   if (hasAccess.status !== 200) {
-    redirect(`/dashboard/${auth.user?.workspace[0].id}`)
+    redirect(`/dashboard/${auth.user?.workspace[0].id}/home`)
   }
 
   if (!hasAccess.data?.workspace) return null
 
   const query = new QueryClient()
 
-  await query.prefetchQuery({
-    queryKey: ['workspace-folders'],
-    queryFn: () => getWorkspaceFolders(workspaceId),
-  })
-
-  await query.prefetchQuery({
-    queryKey: ['user-videos'],
-    queryFn: () => getAllUserVideos(workspaceId),
-  })
-
-  await query.prefetchQuery({
-    queryKey: ['user-workspaces'],
-    queryFn: () => getWorkSpaces(),
-  })
-
-  await query.prefetchQuery({
-    queryKey: ['user-notifications'],
-    queryFn: () => getNotifications(),
-  })
-
-
+  // Only prefetch what the persistent shell (sidebar + navbar) needs.
+  // Page-specific data (folders, videos, comments, tasks...) is prefetched
+  // by each route so navigation isn't blocked by unrelated queries.
+  await Promise.all([
+    query.prefetchQuery({
+      queryKey: ['user-workspaces'],
+      queryFn: () => getWorkSpaces(),
+    }),
+    query.prefetchQuery({
+      queryKey: ['joined-workspaces'],
+      queryFn: () => getJoinedWorkspaces(),
+    }),
+    query.prefetchQuery({
+      queryKey: ['notifications-unread'],
+      queryFn: () => getUnreadNotificationCount(),
+    }),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(query)}>
