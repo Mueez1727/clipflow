@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-query'
 import Sidebar from '@/components/global/sidebar'
 import GlobalHeader from '@/components/global/global-header'
+import DashboardSocketShell from '@/components/global/socket/dashboard-socket-shell'
 
 type Props = {
   params: { workspaceId: string }
@@ -52,13 +53,15 @@ const Layout = async ({ params: { workspaceId }, children }: Props) => {
 
   return (
     <HydrationBoundary state={dehydrate(query)}>
-      <div className="flex h-screen w-screen bg-background">
-        <Sidebar activeWorkspaceId={workspaceId} />
-        <div className="w-full overflow-x-hidden overflow-y-scroll bg-background p-6 pt-28">
-          <GlobalHeader workspace={hasAccess.data.workspace} />
-          <div className="mt-4">{children}</div>
+      <DashboardSocketShell workspaceId={workspaceId}>
+        <div className="flex h-screen w-screen bg-background">
+          <Sidebar activeWorkspaceId={workspaceId} />
+          <div className="w-full overflow-x-hidden overflow-y-scroll bg-background p-6 pt-28">
+            <GlobalHeader workspace={hasAccess.data.workspace} />
+            <div className="mt-4">{children}</div>
+          </div>
         </div>
-      </div>
+      </DashboardSocketShell>
     </HydrationBoundary>
   )
 }
