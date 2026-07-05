@@ -118,12 +118,85 @@ export const joinWorkspaceByCode = async (code: string) => {
         content: `${memberName} joined ${workspace.name}`,
         link: `/dashboard/${workspace.id}/workspace`,
       })
+
+      if (workspace.userId && workspace.userId !== dbUser.id) {
+        await createNotification({
+          userId: workspace.userId,
+          actorId: dbUser.id,
+          type: 'WORKSPACE_JOINED',
+          content: `${memberName} joined your workspace "${workspace.name}"`,
+          workspaceId: workspace.id,
+          link: `/dashboard/${workspace.id}/workspace`,
+        })
+      }
     }
 
     return { status: 200, data: { id: workspace.id, name: workspace.name } }
   } catch (error) {
     console.log(error)
     return { status: 500, data: 'Something went wrong joining the workspace' }
+  }
+}
+
+export const leaveWorkspace = async (workspaceId: string) => {
+  try {
+    const dbUser = await getCurrentDbUser()
+    if (!dbUser) return { status: 404, data: 'User not found' }
+
+    const workspace = await client.workSpace.findFirst({
+      where: {
+        id: workspaceId,
+        type: 'PUBLIC',
+        members: { some: { userId: dbUser.id } },
+      },
+      select: { id: true, name: true, userId: true },
+    })
+
+    if (!workspace) {
+      return { status: 404, data: 'You are not a member of this workspace' }
+    }
+
+    if (workspace.userId === dbUser.id) {
+      return { status: 400, data: 'Owners cannot leave their own workspace' }
+    }
+
+    await client.member.deleteMany({
+      where: { userId: dbUser.id, workSpaceId: workspaceId },
+    })
+
+    const memberName =
+      `${dbUser.firstname ?? ''} ${dbUser.lastname ?? ''}`.trim() || 'Someone'
+
+    await logActivity({
+      workspaceId,
+      type: 'WORKSPACE_JOINED',
+      content: 'left the workspace',
+      userId: dbUser.id,
+    })
+
+    if (workspace.userId) {
+      await createNotification({
+        userId: workspace.userId,
+        actorId: dbUser.id,
+        type: 'WORKSPACE_LEFT',
+        content: `${memberName} left "${workspace.name}"`,
+        workspaceId,
+        link: `/dashboard/${workspaceId}/workspace?tab=members`,
+      })
+    }
+
+    await notifyWorkspaceMembers({
+      workspaceId,
+      actorId: dbUser.id,
+      type: 'WORKSPACE_LEFT',
+      content: `${memberName} left the workspace`,
+      link: `/dashboard/${workspaceId}/workspace?tab=members`,
+    })
+
+    return { status: 200, data: 'Left workspace' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
   }
 }
 
@@ -183,6 +256,7 @@ export const getJoinedWorkspaces = async () => {
         isOwner: ws.userId === dbUser.id,
         memberCount: Math.max(ws._count.members, ws.userId ? 1 : 0),
         videoCount: ws._count.videos + ws._count.sharedVideos,
+        createdAt: ws.createdAt,
         lastActivity,
       }
     })
@@ -524,7 +598,7 @@ export const shareVideoToWorkspace = async (
         content: `${sharerName} shared ${video?.title ?? 'a video'} in ${
           ws?.name ?? 'the workspace'
         }`,
-        link: `/dashboard/${workspaceId}/video/${videoId}`,
+        link: `/dashboard/${workspaceId}/workspace?tab=videos`,
       })
     }
 
@@ -653,11 +727,24 @@ export const sendWorkspaceMessage = async (
               type: 'MENTION',
               content: `${senderName} mentioned you in chat`,
               workspaceId,
-              link: `/dashboard/${workspaceId}/workspace`,
+              link: `/dashboard/${workspaceId}/workspace?tab=chat`,
             })
           )
       )
     }
+
+    const senderName =
+      `${dbUser.firstname ?? ''} ${dbUser.lastname ?? ''}`.trim() || 'Someone'
+    const preview = trimmed
+      ? trimmed.slice(0, 80) + (trimmed.length > 80 ? '…' : '')
+      : 'sent an attachment'
+    await notifyWorkspaceMembers({
+      workspaceId,
+      actorId: dbUser.id,
+      type: 'MESSAGE_SENT',
+      content: `${senderName}: ${preview}`,
+      link: `/dashboard/${workspaceId}/workspace?tab=chat`,
+    })
 
     return { status: 200, data: message.id }
   } catch (error) {

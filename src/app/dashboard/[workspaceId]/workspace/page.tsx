@@ -1,5 +1,4 @@
 import { getWorkspaceDetails } from '@/actions/collab-workspace'
-import { onAuthenticateUser } from '@/actions/user'
 import WorkspaceDashboard from '@/components/global/workspace/workspace-dashboard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { redirect } from 'next/navigation'
@@ -13,9 +12,7 @@ const WorkspacePage = async ({ params: { workspaceId } }: Props) => {
   const details = await getWorkspaceDetails(workspaceId)
 
   if (details.status !== 200 || !details.data) {
-    const auth = await onAuthenticateUser()
-    const fallbackId = auth.user?.workspace?.[0]?.id ?? workspaceId
-    redirect(`/dashboard/${fallbackId}/home`)
+    redirect('/dashboard/workspace')
   }
 
   return (

@@ -99,7 +99,7 @@ const WorkspaceDashboard = (props: Props) => {
             <TabsTrigger
               key={tab}
               value={tab}
-              className="rounded-full border border-transparent px-5 py-2 capitalize data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-[#7C3AED]"
+              className="rounded-full border border-transparent px-5 py-2 capitalize transition-colors hover:border-border hover:bg-accent/60 hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-[#7C3AED] dark:hover:bg-accent/40"
             >
               {tab}
             </TabsTrigger>

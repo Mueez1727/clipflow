@@ -5,6 +5,7 @@ import {
   createNotification,
   getCurrentDbUser,
   logActivity,
+  notifyWorkspaceMembers,
 } from '@/lib/server/workspace-helpers'
 import { TASK_PRIORITY, TASK_STATUS } from '@prisma/client'
 
@@ -76,9 +77,17 @@ export const createTask = async (input: CreateTaskInput) => {
         type: 'TASK_ASSIGNED',
         content: `${actorName(dbUser)} assigned you the task "${task.title}"`,
         workspaceId: input.workspaceId,
-        link: `/dashboard/${input.workspaceId}/workspace`,
+        link: `/dashboard/${input.workspaceId}/workspace?tab=tasks`,
       })
     }
+
+    await notifyWorkspaceMembers({
+      workspaceId: input.workspaceId,
+      actorId: dbUser.id,
+      type: 'TASK_CREATED',
+      content: `${actorName(dbUser)} created task "${task.title}"`,
+      link: `/dashboard/${input.workspaceId}/workspace?tab=tasks`,
+    })
 
     if (task.Assignee) {
       await logActivity({

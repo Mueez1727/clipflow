@@ -83,8 +83,8 @@ const VideoReviewControls = ({
         className={cn(
           'flex h-5 items-center justify-center rounded p-[5px] transition-colors',
           pinned
-            ? 'bg-[#7C3AED] text-white'
-            : 'bg-muted text-muted-foreground hover:bg-accent'
+            ? 'bg-[#7C3AED] text-white shadow-sm'
+            : 'border border-border/80 bg-background/95 text-foreground shadow-sm hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] dark:bg-card/95'
         )}
       >
         <Pin className="h-3 w-3" />
@@ -96,7 +96,7 @@ const VideoReviewControls = ({
             type="button"
             onClick={(e) => e.stopPropagation()}
             title="Review"
-            className="flex h-5 items-center justify-center rounded bg-muted p-[5px] text-muted-foreground transition-colors hover:bg-accent"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background/95 text-foreground shadow-sm transition-colors hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] dark:bg-card/95"
           >
             <ShieldCheck className="h-3 w-3" />
           </button>

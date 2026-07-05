@@ -1,4 +1,5 @@
 import { client } from '@/lib/prisma'
+import { getOrCreatePersonalStorage } from '@/lib/personal-library'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
@@ -9,28 +10,18 @@ export async function POST(
     const body = await req.json()
     const { id } = params
 
-    const personalworkspaceId = await client.user.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        workspace: {
-          where: {
-            type: 'PERSONAL',
-          },
-          select: {
-            id: true,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
+    const dbUser = await client.user.findUnique({
+      where: { id },
+      select: { id: true, firstname: true },
     })
-    const workspaceId = personalworkspaceId?.workspace?.[0]?.id
-    if (!workspaceId) {
-      return NextResponse.json({ status: 400, message: 'Personal workspace not found' })
+    if (!dbUser) {
+      return NextResponse.json({ status: 400, message: 'User not found' })
     }
+
+    const workspaceId = await getOrCreatePersonalStorage(
+      dbUser.id,
+      dbUser.firstname
+    )
 
     const startProcessingVideo = await client.workSpace.update({
       where: {

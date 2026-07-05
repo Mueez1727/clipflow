@@ -48,7 +48,7 @@ const ChangeVideoLocation = ({
         <Label className="flex-col gap-y-2 flex">
           <p className="text-xs">Workspace</p>
           <select
-            className="rounded-xl text-base bg-transparent"
+            className="rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground"
             {...register('workspace_id')}
           >
             {workspaces.map((space) => (
@@ -70,12 +70,12 @@ const ChangeVideoLocation = ({
             {isFolders && isFolders.length > 0 ? (
               <select
                 {...register('folder_id')}
-                className="rounded-xl bg-transparent text-base"
+                className="rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground"
               >
                 {isFolders.map((folder, key) =>
                   key === 0 ? (
                     <option
-                      className="text-muted-foreground"
+                      className="bg-background text-foreground"
                       key={folder.id}
                       value={folder.id}
                     >
@@ -83,7 +83,7 @@ const ChangeVideoLocation = ({
                     </option>
                   ) : (
                     <option
-                      className="text-muted-foreground"
+                      className="bg-background text-foreground"
                       key={folder.id}
                       value={folder.id}
                     >

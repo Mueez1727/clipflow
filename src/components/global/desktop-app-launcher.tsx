@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/dialog'
 import {
   DESKTOP_APP_DOWNLOAD_URL,
-  DESKTOP_APP_PROTOCOL,
+  buildDesktopRecordUrl,
 } from '@/constants/app'
+import { useUser } from '@clerk/nextjs'
 import { Download, MonitorPlay } from 'lucide-react'
 import React, { useCallback, useState } from 'react'
 
@@ -22,19 +23,21 @@ type Props = {
 }
 
 export const DesktopAppLauncher = ({ trigger, onLaunch }: Props) => {
+  const { user } = useUser()
   const [open, setOpen] = useState(false)
 
   const tryLaunchDesktop = useCallback(() => {
     onLaunch?.()
+    const protocolUrl = buildDesktopRecordUrl(user?.id)
     const iframe = document.createElement('iframe')
     iframe.style.display = 'none'
-    iframe.src = DESKTOP_APP_PROTOCOL
+    iframe.src = protocolUrl
     document.body.appendChild(iframe)
     window.setTimeout(() => {
       document.body.removeChild(iframe)
       setOpen(true)
     }, 900)
-  }, [onLaunch])
+  }, [onLaunch, user?.id])
 
   return (
     <>
@@ -70,7 +73,7 @@ export const DesktopAppLauncher = ({ trigger, onLaunch }: Props) => {
               type="button"
               className="btn-clipflow w-full gap-2"
               onClick={() => {
-                window.location.href = DESKTOP_APP_PROTOCOL
+                window.location.href = buildDesktopRecordUrl(user?.id)
               }}
             >
               <MonitorPlay className="h-4 w-4" />

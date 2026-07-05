@@ -1,6 +1,7 @@
 'use server'
 
 import { client } from '@/lib/prisma'
+import { PERSONAL_ROUTE } from '@/lib/personal-library'
 import { currentUser } from '@clerk/nextjs/server'
 import nodemailer from 'nodemailer'
 // import Stripe from 'stripe'
@@ -30,6 +31,14 @@ export const sendEmail = async (
     html,
   }
   return { transporter, mailOptions }
+}
+
+export const completeAuthCallback = async () => {
+  const auth = await onAuthenticateUser()
+  if (auth.status === 200 || auth.status === 201) {
+    return { redirectTo: `/dashboard/${PERSONAL_ROUTE}/home` }
+  }
+  return { redirectTo: '/auth/sign-in' }
 }
 
 export const onAuthenticateUser = async () => {
@@ -71,12 +80,6 @@ export const onAuthenticateUser = async () => {
         },
         subscription: {
           create: {},
-        },
-        workspace: {
-          create: {
-            name: `${user.firstName}'s Workspace`,
-            type: 'PERSONAL',
-          },
         },
       },
       include: {

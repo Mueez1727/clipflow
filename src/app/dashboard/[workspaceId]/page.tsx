@@ -3,7 +3,6 @@ import {
   getWorkspaceFolders,
 } from '@/actions/workspace'
 import CreateFolders from '@/components/global/create-folder'
-import CreateWorkspace from '@/components/global/create-workspace'
 import Folders from '@/components/global/folders'
 import ArchivedLibrary from '@/components/global/folders/archived-library'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -55,7 +54,6 @@ const Page = async ({ params: { workspaceId } }: Props) => {
               </TabsTrigger>
             </TabsList>
             <div className="flex gap-x-3">
-              <CreateWorkspace />
               <CreateFolders workspaceId={workspaceId} />
             </div>
           </div>

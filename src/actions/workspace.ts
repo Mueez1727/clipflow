@@ -1,6 +1,10 @@
 'use server'
 
 import { client } from '@/lib/prisma'
+import {
+  getOrCreatePersonalStorage,
+  personalVideoWhere,
+} from '@/lib/personal-library'
 import { currentUser } from '@clerk/nextjs/server'
 import { sendEmail } from './user'
 import { createClient, OAuthStrategy } from '@wix/sdk'
@@ -11,6 +15,19 @@ export const verifyAccessToWorkspace = async (workspaceId: string) => {
   try {
     const user = await currentUser()
     if (!user) return { status: 403, data: { workspace: null } }
+
+    if (workspaceId === 'personal') {
+      return {
+        status: 200,
+        data: {
+          workspace: {
+            id: 'personal',
+            name: 'Personal Library',
+            type: 'PERSONAL',
+          },
+        },
+      }
+    }
 
     const isUserInWorkspace = await client.workSpace.findFirst({
       where: {
@@ -51,11 +68,38 @@ export const verifyAccessToWorkspace = async (workspaceId: string) => {
   }
 }
 
+export const getPersonalStorageId = async () => {
+  try {
+    const user = await currentUser()
+    if (!user) return { status: 403, data: null as string | null }
+    const dbUser = await client.user.findUnique({
+      where: { clerkid: user.id },
+      select: { id: true, firstname: true },
+    })
+    if (!dbUser) return { status: 404, data: null }
+    const storageId = await getOrCreatePersonalStorage(
+      dbUser.id,
+      dbUser.firstname
+    )
+    return { status: 200, data: storageId }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: null }
+  }
+}
+
 export const getWorkspaceFolders = async (workSpaceId: string) => {
   try {
+    let targetId = workSpaceId
+    if (workSpaceId === 'personal') {
+      const storage = await getPersonalStorageId()
+      if (!storage.data) return { status: 404, data: [] }
+      targetId = storage.data
+    }
+
     const isFolders = await client.folder.findMany({
       where: {
-        workSpaceId,
+        workSpaceId: targetId,
         archived: false,
       },
       include: {
@@ -77,14 +121,18 @@ export const getWorkspaceFolders = async (workSpaceId: string) => {
 }
 
 export const getAllUserVideos = async (workSpaceId: string) => {
+  void workSpaceId
   try {
     const user = await currentUser()
     if (!user) return { status: 404 }
+    const dbUser = await client.user.findUnique({
+      where: { clerkid: user.id },
+      select: { id: true },
+    })
+    if (!dbUser) return { status: 404 }
+
     const videos = await client.video.findMany({
-      where: {
-        archived: false,
-        OR: [{ workSpaceId }, { folderId: workSpaceId }],
-      },
+      where: personalVideoWhere(dbUser.id),
       select: {
         id: true,
         title: true,
@@ -279,12 +327,45 @@ export const restoreFolder = async (folderId: string) => {
 
 export const archiveVideo = async (videoId: string) => {
   try {
-    const video = await client.video.update({
+    const user = await currentUser()
+    if (!user) return { status: 403, data: 'Unauthorized' }
+
+    const video = await client.video.findFirst({
+      where: {
+        id: videoId,
+        User: { clerkid: user.id },
+      },
+      select: { id: true },
+    })
+    if (!video) return { status: 404, data: 'Video not found' }
+
+    await client.video.update({
       where: { id: videoId },
       data: { archived: true },
     })
-    if (video) return { status: 200, data: 'Video archived' }
-    return { status: 400, data: 'Video does not exist' }
+    return { status: 200, data: 'Video archived' }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
+  }
+}
+
+export const deleteVideo = async (videoId: string) => {
+  try {
+    const user = await currentUser()
+    if (!user) return { status: 403, data: 'Unauthorized' }
+
+    const video = await client.video.findFirst({
+      where: {
+        id: videoId,
+        User: { clerkid: user.id },
+      },
+      select: { id: true },
+    })
+    if (!video) return { status: 404, data: 'Video not found' }
+
+    await client.video.delete({ where: { id: videoId } })
+    return { status: 200, data: 'Video deleted' }
   } catch (error) {
     console.log(error)
     return { status: 500, data: 'Something went wrong' }
@@ -307,8 +388,15 @@ export const restoreVideo = async (videoId: string) => {
 
 export const getArchivedFolders = async (workSpaceId: string) => {
   try {
+    let targetId = workSpaceId
+    if (workSpaceId === 'personal') {
+      const storage = await getPersonalStorageId()
+      if (!storage.data) return { status: 404, data: [] }
+      targetId = storage.data
+    }
+
     const folders = await client.folder.findMany({
-      where: { workSpaceId, archived: true },
+      where: { workSpaceId: targetId, archived: true },
       include: {
         _count: { select: { videos: true } },
       },
@@ -322,11 +410,20 @@ export const getArchivedFolders = async (workSpaceId: string) => {
 }
 
 export const getArchivedVideos = async (workSpaceId: string) => {
+  void workSpaceId
   try {
+    const user = await currentUser()
+    if (!user) return { status: 404, data: [] }
+    const dbUser = await client.user.findUnique({
+      where: { clerkid: user.id },
+      select: { id: true },
+    })
+    if (!dbUser) return { status: 404, data: [] }
+
     const videos = await client.video.findMany({
       where: {
         archived: true,
-        OR: [{ workSpaceId }, { folderId: workSpaceId }],
+        userId: dbUser.id,
       },
       select: {
         id: true,
@@ -348,10 +445,8 @@ export const getArchivedVideos = async (workSpaceId: string) => {
   }
 }
 
-const workspaceVideoWhere = (workSpaceId: string) => ({
-  archived: false,
-  OR: [{ workSpaceId }, { folderId: workSpaceId }],
-})
+const workspaceVideoWhere = (_workSpaceId: string, userId: string) =>
+  personalVideoWhere(userId)
 
 const videoListSelect = {
   id: true,
@@ -377,31 +472,58 @@ const videoListSelect = {
 export const getDashboardStats = async (workSpaceId: string) => {
   try {
     const user = await currentUser()
-    const videoWhere = workspaceVideoWhere(workSpaceId)
+    if (!user) {
+      return {
+        status: 400,
+        data: {
+          totalVideos: 0,
+          totalFolders: 0,
+          videosProcessed: 0,
+          workspaceCount: 0,
+          storageUsed: null as string | null,
+        },
+      }
+    }
 
-    const dbUser = user
-      ? await client.user.findUnique({
-          where: { clerkid: user.id },
-          select: { id: true },
-        })
-      : null
+    const dbUser = await client.user.findUnique({
+      where: { clerkid: user.id },
+      select: { id: true, firstname: true },
+    })
+    if (!dbUser) {
+      return {
+        status: 400,
+        data: {
+          totalVideos: 0,
+          totalFolders: 0,
+          videosProcessed: 0,
+          workspaceCount: 0,
+          storageUsed: null as string | null,
+        },
+      }
+    }
+
+    const videoWhere = workspaceVideoWhere(workSpaceId, dbUser.id)
+    const storageId = await getOrCreatePersonalStorage(
+      dbUser.id,
+      dbUser.firstname
+    )
 
     const [totalVideos, totalFolders, videosProcessed, workspaceCount] =
       await Promise.all([
         client.video.count({ where: videoWhere }),
-        client.folder.count({ where: { workSpaceId, archived: false } }),
+        client.folder.count({
+          where: { workSpaceId: storageId, archived: false },
+        }),
         client.video.count({ where: { ...videoWhere, processing: false } }),
-        dbUser
-          ? client.workSpace.count({
-              where: {
-                type: 'PUBLIC',
-                OR: [
-                  { userId: dbUser.id },
-                  { members: { some: { userId: dbUser.id } } },
-                ],
-              },
-            })
-          : Promise.resolve(0),
+        client.workSpace.count({
+          where: {
+            type: 'PUBLIC',
+            OR: [
+              { userId: dbUser.id },
+              { members: { some: { userId: dbUser.id } } },
+            ],
+          },
+        }),
       ])
 
     return {
@@ -434,8 +556,14 @@ export const getRecentVideos = async (workSpaceId: string, limit = 4) => {
     const user = await currentUser()
     if (!user) return { status: 404, data: [] }
 
+    const dbUser = await client.user.findUnique({
+      where: { clerkid: user.id },
+      select: { id: true },
+    })
+    if (!dbUser) return { status: 404, data: [] }
+
     const videos = await client.video.findMany({
-      where: workspaceVideoWhere(workSpaceId),
+      where: workspaceVideoWhere(workSpaceId, dbUser.id),
       select: videoListSelect,
       orderBy: {
         createdAt: 'desc',
@@ -456,9 +584,18 @@ export const getRecentVideos = async (workSpaceId: string, limit = 4) => {
 
 export const createFolder = async (workspaceId: string) => {
   try {
+    let targetId = workspaceId
+    if (workspaceId === 'personal') {
+      const storage = await getPersonalStorageId()
+      if (!storage.data) {
+        return { status: 400, data: 'Unable to create folder' }
+      }
+      targetId = storage.data
+    }
+
     const isNewFolder = await client.workSpace.update({
       where: {
-        id: workspaceId,
+        id: targetId,
       },
       data: {
         folders: {
@@ -662,8 +799,8 @@ export const editVideoInfo = async (
     const video = await client.video.update({
       where: { id: videoId },
       data: {
-        title,
-        description,
+        title: title.trim() || null,
+        description: description.trim() || null,
       },
     })
     if (video) return { status: 200, data: 'Video successfully updated' }
@@ -742,5 +879,75 @@ export const howToPost = async () => {
   } catch (error) {
     console.log(error)
     return { status: 400 }
+  }
+}
+
+export const generateVideoTranscript = async (videoId: string) => {
+  try {
+    const user = await currentUser()
+    if (!user) return { status: 403, data: 'Unauthorized' }
+
+    const apiKey = process.env.OPEN_AI_KEY
+    if (!apiKey) {
+      return { status: 503, data: 'Transcription service is not configured' }
+    }
+
+    const video = await client.video.findUnique({
+      where: { id: videoId },
+      select: { summary: true, source: true, userId: true },
+    })
+    if (!video) return { status: 404, data: 'Video not found' }
+
+    if (video.summary?.trim()) {
+      return { status: 200, data: video.summary }
+    }
+
+    const streamBase = process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL
+    if (!streamBase) {
+      return { status: 503, data: 'Video stream URL is not configured' }
+    }
+
+    const videoUrl = `${streamBase}/${video.source}`
+    const fileRes = await fetch(videoUrl)
+    if (!fileRes.ok) {
+      return { status: 400, data: 'Could not fetch video for transcription' }
+    }
+
+    const buffer = Buffer.from(await fileRes.arrayBuffer())
+    const form = new FormData()
+    form.append(
+      'file',
+      new Blob([buffer], { type: 'video/webm' }),
+      'recording.webm'
+    )
+    form.append('model', 'whisper-1')
+
+    const whisperRes = await fetch(
+      'https://api.openai.com/v1/audio/transcriptions',
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      }
+    )
+
+    if (!whisperRes.ok) {
+      console.log('Whisper error', await whisperRes.text())
+      return { status: 500, data: 'Transcription failed' }
+    }
+
+    const payload = (await whisperRes.json()) as { text?: string }
+    const text = payload.text?.trim()
+    if (!text) return { status: 500, data: 'Empty transcript returned' }
+
+    await client.video.update({
+      where: { id: videoId },
+      data: { summary: text },
+    })
+
+    return { status: 200, data: text }
+  } catch (error) {
+    console.log(error)
+    return { status: 500, data: 'Something went wrong' }
   }
 }

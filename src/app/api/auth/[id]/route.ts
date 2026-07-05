@@ -51,12 +51,6 @@ export async function GET(
         studio: {
           create: {},
         },
-        workspace: {
-          create: {
-            name: `${clerkUserInstance.firstName || 'User'}'s Workspace`,
-            type: 'PERSONAL',
-          },
-        },
         subscription: {
           create: {},
         },

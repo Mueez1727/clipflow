@@ -94,8 +94,12 @@ export const logActivity = async (input: {
 
 type NotificationType =
   | 'WORKSPACE_JOINED'
+  | 'WORKSPACE_LEFT'
   | 'COMMENT_ADDED'
   | 'VIDEO_SHARED'
+  | 'VIDEO_UPLOADED'
+  | 'MESSAGE_SENT'
+  | 'TASK_CREATED'
   | 'TASK_ASSIGNED'
   | 'MENTION'
   | 'VIDEO_APPROVED'

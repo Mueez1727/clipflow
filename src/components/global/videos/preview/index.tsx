@@ -4,17 +4,11 @@ import { useQueryData } from '@/hooks/useQueryData'
 import { VideoProps } from '@/types/index.type'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useRef } from 'react'
-import CopyLink from '../copy-link'
-import RichLink from '../rich-link'
-import { truncateString } from '@/lib/utils'
-import { Download } from 'lucide-react'
-import TabMenu from '../../tabs'
-import AiTools from '../../ai-tools'
-import VideoTranscript from '../../video-transcript'
-import Activities from '../../activities'
 import EditVideo from '../edit'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import VideoPreviewSidebar from './sidebar'
+import { PERSONAL_ROUTE } from '@/lib/personal-library'
 
 const VideoComments = dynamic(
   () => import('../../workspace/video-comments'),
@@ -33,55 +27,75 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const { data } = useQueryData(['preview-video'], () =>
+  const { data, isPending } = useQueryData(['preview-video'], () =>
     getPreviewVideo(videoId)
   )
-  console.log("QUERY DATA:", data)
 
   const notifyFirstView = async () => await sendEmailForFirstView(videoId)
 
-  const { data: video, status, author } = data as VideoProps
-  
+  const result = data as VideoProps | undefined
+  const video = result?.data
+  const status = result?.status
+  const author = result?.author
+
   useEffect(() => {
     if (status && status !== 200) {
       router.push('/')
     }
   }, [status, router])
-  
-  const daysAgo = Math.floor(
-    (new Date().getTime() - video.createdAt.getTime()) / (24 * 60 * 60 * 1000)
-  )
-  console.log(video)
-  console.log(video?.createdAt)
-  console.log(typeof video?.createdAt)
 
   useEffect(() => {
-    if (video.views === 0) {
-      notifyFirstView()
-    }
+    if (!video || video.views !== 0) return
+    notifyFirstView()
     return () => {
       notifyFirstView()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [video?.views])
+
+  if (isPending || !data || !video) {
+    return <Skeleton className="h-96 w-full rounded-2xl" />
+  }
+
+  const daysAgo = Math.floor(
+    (new Date().getTime() - video.createdAt.getTime()) / (24 * 60 * 60 * 1000)
+  )
+
+  const displayTitle =
+    video.title && video.title !== 'Untilted Video' && video.title.trim()
+      ? video.title
+      : null
+  const displayDescription =
+    video.description &&
+    video.description !== 'No Description' &&
+    video.description.trim()
+      ? video.description
+      : null
+
+  const commentsWorkspaceId =
+    workspaceId && workspaceId !== PERSONAL_ROUTE ? workspaceId : undefined
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 lg:py-10 overflow-y-auto gap-5">
-      <div className="flex flex-col lg:col-span-2 gap-y-10">
+    <div className="grid grid-cols-1 gap-5 overflow-y-auto lg:grid-cols-3 lg:py-10">
+      <div className="flex flex-col gap-y-10 lg:col-span-2">
         <div>
-          <div className="flex gap-x-5 items-start justify-between">
-            <h2 className="text-4xl font-bold text-foreground">{video.title}</h2>
+          <div className="flex items-start justify-between gap-x-5">
+            {displayTitle ? (
+              <h2 className="text-4xl font-bold text-foreground">{displayTitle}</h2>
+            ) : (
+              <h2 className="text-4xl font-bold text-muted-foreground/50">
+                Add a title…
+              </h2>
+            )}
             {author ? (
               <EditVideo
                 videoId={videoId}
                 title={video.title as string}
                 description={video.description as string}
               />
-            ) : (
-              <></>
-            )}
+            ) : null}
           </div>
-          <span className="flex gap-x-3 mt-2">
+          <span className="mt-2 flex gap-x-3">
             <p className="capitalize text-muted-foreground">
               {video.User?.firstname} {video.User?.lastname}
             </p>
@@ -93,15 +107,15 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
         <video
           ref={videoRef}
           preload="metadata"
-          className="w-full aspect-video rounded-xl"
+          className="aspect-video w-full rounded-xl"
           controls
         >
           <source
             src={`${process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL}/${video.source}#1`}
           />
         </video>
-        <div className="flex flex-col text-2xl gap-y-4">
-          <div className="flex gap-x-5 items-center justify-between">
+        <div className="flex flex-col gap-y-4 text-2xl">
+          <div className="flex items-center justify-between gap-x-5">
             <p className="text-semibold text-foreground">Description</p>
             {author ? (
               <EditVideo
@@ -109,55 +123,31 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
                 title={video.title as string}
                 description={video.description as string}
               />
-            ) : (
-              <></>
-            )}
+            ) : null}
           </div>
-          <p className="text-lg font-medium text-muted-foreground">
-            {video.description}
-          </p>
+          {displayDescription ? (
+            <p className="text-lg font-medium text-muted-foreground">
+              {displayDescription}
+            </p>
+          ) : (
+            <p className="text-lg font-medium text-muted-foreground/40">
+              Add a description…
+            </p>
+          )}
         </div>
-        {workspaceId && (
+        {commentsWorkspaceId && (
           <VideoComments
             videoId={videoId}
-            workspaceId={workspaceId}
+            workspaceId={commentsWorkspaceId}
             videoRef={videoRef}
           />
         )}
       </div>
-      <div className="lg:col-span-1 flex flex-col gap-y-16">
-        <div className="flex justify-end gap-x-3 items-center">
-          <CopyLink
-            variant="outline"
-            className="rounded-full bg-transparent px-10"
-            videoId={videoId}
-          />
-          <RichLink
-            description={truncateString(video.description as string, 150)}
-            id={videoId}
-            source={video.source}
-            title={video.title as string}
-          />
-          <Download className="text-muted-foreground transition-colors hover:text-[#7C3AED]" />
-        </div>
-        <div>
-          <TabMenu
-            defaultValue="Ai tools"
-            triggers={['Ai tools', 'Transcript', 'Activity']}
-          >
-            <AiTools
-              videoId={videoId}
-              trial={video.User?.trial ?? false}
-              plan={video.User?.subscription?.plan ?? 'FREE'}
-            />
-            <VideoTranscript transcript={video.summary!} />
-            <Activities
-              author={video.User?.firstname as string}
-              videoId={videoId}
-            />
-          </TabMenu>
-        </div>
-      </div>
+      <VideoPreviewSidebar
+        videoId={videoId}
+        source={video.source}
+        summary={video.summary}
+      />
     </div>
   )
 }

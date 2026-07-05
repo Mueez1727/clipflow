@@ -46,8 +46,12 @@ type NotificationItem = {
 
 const TYPE_ICON: Record<string, { icon: LucideIcon; color: string }> = {
   WORKSPACE_JOINED: { icon: UserPlus, color: 'bg-pink-500/10 text-pink-500' },
+  WORKSPACE_LEFT: { icon: UserPlus, color: 'bg-orange-500/10 text-orange-500' },
   COMMENT_ADDED: { icon: MessageSquare, color: 'bg-violet-500/10 text-violet-500' },
   VIDEO_SHARED: { icon: Share2, color: 'bg-blue-500/10 text-blue-500' },
+  VIDEO_UPLOADED: { icon: Share2, color: 'bg-blue-500/10 text-blue-500' },
+  MESSAGE_SENT: { icon: MessageSquare, color: 'bg-sky-500/10 text-sky-500' },
+  TASK_CREATED: { icon: ClipboardList, color: 'bg-indigo-500/10 text-indigo-500' },
   TASK_ASSIGNED: { icon: ClipboardList, color: 'bg-amber-500/10 text-amber-600' },
   MENTION: { icon: AtSign, color: 'bg-[#7C3AED]/10 text-[#7C3AED]' },
   VIDEO_APPROVED: { icon: ShieldCheck, color: 'bg-emerald-500/10 text-emerald-600' },

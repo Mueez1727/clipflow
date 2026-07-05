@@ -52,9 +52,21 @@ const AuthWidget = ({ mode }: Props) => {
   }
 
   if (mode === 'sign-in') {
-    return <SignIn appearance={appearance} />
+    return (
+      <SignIn
+        appearance={appearance}
+        forceRedirectUrl="/auth/callback"
+        signUpUrl="/auth/sign-up"
+      />
+    )
   }
-  return <SignUp appearance={appearance} />
+  return (
+    <SignUp
+      appearance={appearance}
+      forceRedirectUrl="/auth/callback"
+      signInUrl="/auth/sign-in"
+    />
+  )
 }
 
 export default AuthWidget

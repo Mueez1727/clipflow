@@ -3,6 +3,7 @@ import { getPreviewVideo } from '@/actions/workspace'
 import { getWorkspaceMembers } from '@/actions/collab-workspace'
 import { getWorkspaceVideoComments } from '@/actions/video-comments'
 import VideoPreview from '@/components/global/videos/preview'
+import { PERSONAL_ROUTE } from '@/lib/personal-library'
 import {
   dehydrate,
   HydrationBoundary,
@@ -40,10 +41,12 @@ const VideoPage = async ({ params: { videoId, workspaceId } }: Props) => {
     queryFn: () => getWorkspaceVideoComments(videoId),
   })
 
-  await query.prefetchQuery({
-    queryKey: ['workspace-members', workspaceId],
-    queryFn: () => getWorkspaceMembers(workspaceId),
-  })
+  if (workspaceId !== PERSONAL_ROUTE) {
+    await query.prefetchQuery({
+      queryKey: ['workspace-members', workspaceId],
+      queryFn: () => getWorkspaceMembers(workspaceId),
+    })
+  }
 
   return (
     <HydrationBoundary state={dehydrate(query)}>
