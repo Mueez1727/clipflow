@@ -1,22 +1,14 @@
 import { getPreviewVideo } from '@/actions/workspace'
 import { getWorkspaceMembers } from '@/actions/collab-workspace'
 import { getWorkspaceVideoComments } from '@/actions/video-comments'
-import { Skeleton } from '@/components/ui/skeleton'
+import VideoPreview from '@/components/global/videos/preview'
 import { PERSONAL_ROUTE } from '@/lib/personal-library'
 import {
   dehydrate,
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
 import React from 'react'
-
-const VideoPreview = dynamic(
-  () => import('@/components/global/videos/preview'),
-  {
-    loading: () => <Skeleton className="h-96 w-full rounded-2xl" />,
-  }
-)
 
 type Props = {
   params: {
@@ -28,7 +20,11 @@ type Props = {
 const VideoPage = async ({ params: { videoId, workspaceId } }: Props) => {
   const query = new QueryClient({
     defaultOptions: {
-      queries: { staleTime: 60_000 },
+      queries: {
+        staleTime: 120_000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+      },
     },
   })
 
@@ -42,10 +38,12 @@ const VideoPage = async ({ params: { videoId, workspaceId } }: Props) => {
       query.prefetchQuery({
         queryKey: ['workspace-members', workspaceId],
         queryFn: () => getWorkspaceMembers(workspaceId),
+        staleTime: 120_000,
       }),
       query.prefetchQuery({
         queryKey: [`workspace-video-comments-${videoId}`],
         queryFn: () => getWorkspaceVideoComments(videoId),
+        staleTime: 60_000,
       }),
     ])
   }

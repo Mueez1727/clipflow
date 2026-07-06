@@ -231,7 +231,6 @@ ${JSON.stringify(context)}`
 
     return { status: 200, data: reply }
   } catch (error) {
-    console.log('askWorkspaceAssistant error', error)
     if (error instanceof AiClientError) {
       return { status: 503, data: error.message }
     }

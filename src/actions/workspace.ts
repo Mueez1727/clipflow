@@ -750,45 +750,77 @@ export const getPreviewVideo = async (videoId: string) => {
   try {
     const user = await currentUser()
     if (!user) return { status: 401 }
-    const video = await client.video.findUnique({
-      where: {
-        id: videoId,
-      },
-      select: {
-        title: true,
-        createdAt: true,
-        source: true,
-        description: true,
-        processing: true,
-        views: true,
-        tags: true,
-        User: {
-          select: {
-            firstname: true,
-            lastname: true,
-            image: true,
-            clerkid: true,
-            trial: true,
-            subscription: {
-              select: {
-                plan: true,
-              },
-            },
-          },
+
+    const userSelect = {
+      firstname: true,
+      lastname: true,
+      image: true,
+      clerkid: true,
+      trial: true,
+      subscription: {
+        select: {
+          plan: true,
         },
       },
-    })
+    } as const
+
+    const baseSelect = {
+      title: true,
+      createdAt: true,
+      source: true,
+      description: true,
+      processing: true,
+      views: true,
+      User: { select: userSelect },
+    }
+
+    let video:
+      | ({
+          title: string | null
+          createdAt: Date
+          source: string
+          description: string | null
+          processing: boolean
+          views: number
+          tags?: string[]
+          User: {
+            firstname: string | null
+            lastname: string | null
+            image: string | null
+            clerkid: string
+            trial: boolean
+            subscription: { plan: string } | null
+          } | null
+        })
+      | null = null
+
+    try {
+      video = await client.video.findUnique({
+        where: { id: videoId },
+        select: { ...baseSelect, tags: true },
+      })
+    } catch {
+      video = await client.video.findUnique({
+        where: { id: videoId },
+        select: baseSelect,
+      })
+    }
+
     if (video) {
       return {
         status: 200,
-        data: video,
-        author: user.id === video.User?.clerkid ? true : false,
+        data: {
+          ...video,
+          tags: video.tags ?? [],
+          createdAt: video.createdAt.toISOString(),
+        },
+        author: user.id === video.User?.clerkid,
       }
     }
     return { status: 404 }
   } catch (error) {
-    console.error("GET PREVIEW VIDEO ERROR:", error)
-    return { status: 400 }
+    console.error('GET PREVIEW VIDEO ERROR:', error)
+    return { status: 500 }
   }
 }
 

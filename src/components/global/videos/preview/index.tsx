@@ -3,12 +3,14 @@ import { getPreviewVideo, sendEmailForFirstView } from '@/actions/workspace'
 import { useQueryData } from '@/hooks/useQueryData'
 import { isDefaultVideoTitle } from '@/lib/video-metadata'
 import { PERSONAL_ROUTE } from '@/lib/personal-library'
+import { toDate } from '@/lib/utils'
 import { VideoProps } from '@/types/index.type'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import React, { useEffect, useMemo, useRef } from 'react'
 import EditVideo from '../edit'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import VideoPreviewSidebar from './sidebar'
 
 const VideoComments = dynamic(
@@ -30,10 +32,9 @@ type Props = {
 }
 
 const VideoPreview = ({ videoId, workspaceId }: Props) => {
-  const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const fallbackPath = useMemo(
+  const libraryPath = useMemo(
     () =>
       workspaceId && workspaceId !== PERSONAL_ROUTE
         ? `/dashboard/${workspaceId}`
@@ -41,11 +42,11 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
     [workspaceId]
   )
 
-  const { data, isPending, isFetched, isFetching } = useQueryData(
+  const { data, isPending, isFetched } = useQueryData(
     ['preview-video', videoId],
     () => getPreviewVideo(videoId),
     true,
-    { staleTime: 60_000 }
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const result = data as VideoProps | undefined
@@ -54,28 +55,58 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const author = result?.author
 
   useEffect(() => {
-    if (!isFetched || isFetching) return
-    if (status === 401) {
-      router.replace('/auth/sign-in')
-      return
-    }
-    if (status === 404 || status === 400) {
-      router.replace(fallbackPath)
-    }
-  }, [status, isFetched, isFetching, router, fallbackPath])
-
-  useEffect(() => {
     if (!video || video.views !== 0) return
     void sendEmailForFirstView(videoId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [video?.views, videoId])
 
-  if (isPending || isFetching || !data || !video || status !== 200) {
+  const isLoading = isPending && !video
+
+  if (isLoading) {
     return <Skeleton className="h-96 w-full rounded-2xl" />
   }
 
+  if (isFetched && status === 401) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          Please sign in to view this video.
+        </p>
+      </div>
+    )
+  }
+
+  if (isFetched && status === 404) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">This video could not be found.</p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href={libraryPath}>Back to library</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  if (isFetched && status !== 200) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          Unable to load this video right now. Please try again.
+        </p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href={libraryPath}>Back to library</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  if (!video) {
+    return <Skeleton className="h-96 w-full rounded-2xl" />
+  }
+
+  const createdAt = toDate(video.createdAt)
   const daysAgo = Math.floor(
-    (new Date().getTime() - video.createdAt.getTime()) / (24 * 60 * 60 * 1000)
+    (Date.now() - createdAt.getTime()) / (24 * 60 * 60 * 1000)
   )
 
   const displayTitle =

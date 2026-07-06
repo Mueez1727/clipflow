@@ -1,5 +1,5 @@
 const AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions'
-const DEFAULT_MODEL = 'glm-4-flash'
+const DEFAULT_MODEL = process.env.AI_MODEL ?? 'glm-4.7-flash'
 
 type ChatMessage = {
   role: 'system' | 'user' | 'assistant'
@@ -13,38 +13,66 @@ export class AiClientError extends Error {
   }
 }
 
+const resolveApiKey = () => {
+  const key = process.env.OPEN_AI_KEY?.trim()
+  if (!key) {
+    throw new AiClientError(
+      'AI is not configured. Set OPEN_AI_KEY in your environment.'
+    )
+  }
+  return key
+}
+
 export const completeChat = async (
   messages: ChatMessage[],
   options?: { temperature?: number; maxTokens?: number }
 ): Promise<string> => {
-  const apiKey = process.env.OPEN_AI_KEY
-  if (!apiKey) {
-    throw new AiClientError(
-      'AI is not configured. Add OPEN_AI_KEY to your environment.'
-    )
-  }
+  const apiKey = resolveApiKey()
 
   const response = await fetch(AI_API_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'Accept-Language': 'en-US,en',
     },
     body: JSON.stringify({
       model: DEFAULT_MODEL,
       messages,
       temperature: options?.temperature ?? 0.3,
       max_tokens: options?.maxTokens ?? 800,
+      stream: false,
     }),
   })
 
+  const raw = await response.text()
+
   if (!response.ok) {
-    console.log('AI API error', await response.text())
-    throw new AiClientError('AI request failed. Please try again.')
+    let detail = `HTTP ${response.status}`
+    try {
+      const parsed = JSON.parse(raw) as {
+        error?: { message?: string; code?: string }
+        message?: string
+      }
+      detail =
+        parsed.error?.message ??
+        parsed.message ??
+        raw.slice(0, 200) ??
+        detail
+    } catch {
+      if (raw) detail = raw.slice(0, 200)
+    }
+    throw new AiClientError(`AI request failed: ${detail}`)
   }
 
-  const payload = (await response.json()) as {
-    choices?: { message?: { content?: string } }[]
+  let payload: { choices?: { message?: { content?: string } }[] }
+  try {
+    payload = JSON.parse(raw) as {
+      choices?: { message?: { content?: string } }[]
+    }
+  } catch {
+    throw new AiClientError('AI returned an unreadable response.')
   }
 
   const text = payload.choices?.[0]?.message?.content?.trim()

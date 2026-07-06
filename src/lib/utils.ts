@@ -9,6 +9,9 @@ export const truncateString = (string: string, slice?: number) => {
   return string.slice(0, slice || 30) + '...'
 }
 
+export const toDate = (value: Date | string) =>
+  typeof value === 'string' ? new Date(value) : value
+
 export const formatBytes = (bytes: number): string => {
   if (bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB'] as const

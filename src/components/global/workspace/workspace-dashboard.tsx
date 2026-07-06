@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Users } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import WorkspaceAvatar from './workspace-avatar'
 
 const TabSkeleton = () => (
@@ -64,8 +64,6 @@ const TABS = [
   'settings',
 ] as const
 
-const TAB_PANEL_CLASS = 'mt-0 data-[state=inactive]:hidden'
-
 const WorkspaceDashboard = (props: Props) => {
   const router = useRouter()
   const pathname = usePathname()
@@ -76,22 +74,8 @@ const WorkspaceDashboard = (props: Props) => {
     ? (requested as string)
     : 'overview'
 
-  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
-    () => new Set([activeTab])
-  )
-
-  useEffect(() => {
-    setVisitedTabs((prev) => {
-      if (prev.has(activeTab)) return prev
-      const next = new Set(prev)
-      next.add(activeTab)
-      return next
-    })
-  }, [activeTab])
-
   const onTabChange = useCallback(
     (value: string) => {
-      setVisitedTabs((prev) => new Set(prev).add(value))
       const query = value === 'overview' ? '' : `?tab=${value}`
       router.replace(`${pathname}${query}`, { scroll: false })
     },
@@ -137,58 +121,40 @@ const WorkspaceDashboard = (props: Props) => {
         </TabsList>
 
         <div className="mt-6">
-          {visitedTabs.has('overview') && (
-            <TabsContent value="overview" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceOverview workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('videos') && (
-            <TabsContent value="videos" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceVideos workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('tasks') && (
-            <TabsContent value="tasks" forceMount className={TAB_PANEL_CLASS}>
-              <TaskBoard workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('analytics') && (
-            <TabsContent value="analytics" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceAnalytics workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('activity') && (
-            <TabsContent value="activity" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceActivity workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('members') && (
-            <TabsContent value="members" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceMembers workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('assistant') && (
-            <TabsContent value="assistant" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceAiAssistant workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('chat') && (
-            <TabsContent value="chat" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceChat workspaceId={props.workspaceId} />
-            </TabsContent>
-          )}
-          {visitedTabs.has('settings') && (
-            <TabsContent value="settings" forceMount className={TAB_PANEL_CLASS}>
-              <WorkspaceSettings
-                workspaceId={props.workspaceId}
-                name={props.name}
-                inviteCode={props.inviteCode}
-                isOwner={props.isOwner}
-                createdAt={props.createdAt}
-                memberCount={props.memberCount}
-              />
-            </TabsContent>
-          )}
+          <TabsContent value="overview" className="mt-0">
+            <WorkspaceOverview workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="videos" className="mt-0">
+            <WorkspaceVideos workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="tasks" className="mt-0">
+            <TaskBoard workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="analytics" className="mt-0">
+            <WorkspaceAnalytics workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="activity" className="mt-0">
+            <WorkspaceActivity workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="members" className="mt-0">
+            <WorkspaceMembers workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="assistant" className="mt-0">
+            <WorkspaceAiAssistant workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="chat" className="mt-0">
+            <WorkspaceChat workspaceId={props.workspaceId} />
+          </TabsContent>
+          <TabsContent value="settings" className="mt-0">
+            <WorkspaceSettings
+              workspaceId={props.workspaceId}
+              name={props.name}
+              inviteCode={props.inviteCode}
+              isOwner={props.isOwner}
+              createdAt={props.createdAt}
+              memberCount={props.memberCount}
+            />
+          </TabsContent>
         </div>
       </Tabs>
     </div>

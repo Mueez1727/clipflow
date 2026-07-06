@@ -7,7 +7,11 @@ import {
 
 type QueryOptions = Pick<
   UseQueryOptions,
-  'staleTime' | 'gcTime' | 'refetchOnWindowFocus'
+  | 'staleTime'
+  | 'gcTime'
+  | 'refetchOnWindowFocus'
+  | 'refetchOnMount'
+  | 'refetchOnReconnect'
 >
 
 export const useQueryData = (
@@ -16,13 +20,17 @@ export const useQueryData = (
   enabled: boolean = true,
   options?: QueryOptions
 ) => {
-  const { data, isPending, isFetched, refetch, isFetching } = useQuery({
-    queryKey,
-    queryFn,
-    enabled,
-    staleTime: options?.staleTime ?? 30_000,
-    gcTime: options?.gcTime,
-    refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
-  })
-  return { data, isPending, isFetched, refetch, isFetching }
+  const { data, isPending, isFetched, refetch, isFetching, isLoading } =
+    useQuery({
+      queryKey,
+      queryFn,
+      enabled,
+      staleTime: options?.staleTime ?? 60_000,
+      gcTime: options?.gcTime ?? 300_000,
+      refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+      refetchOnMount: options?.refetchOnMount ?? false,
+      refetchOnReconnect: options?.refetchOnReconnect ?? false,
+    })
+
+  return { data, isPending, isFetched, refetch, isFetching, isLoading }
 }

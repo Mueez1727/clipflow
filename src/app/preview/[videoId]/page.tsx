@@ -16,7 +16,15 @@ type Props = {
 }
 
 const VideoPage = async ({ params: { videoId } }: Props) => {
-  const query = new QueryClient()
+  const query = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 120_000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+      },
+    },
+  })
 
   await query.prefetchQuery({
     queryKey: ['preview-video', videoId],
