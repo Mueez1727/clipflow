@@ -10,12 +10,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  DESKTOP_APP_DOWNLOAD_URL,
   buildDesktopRecordUrl,
+  DESKTOP_APP_DOWNLOAD_URL,
 } from '@/constants/app'
 import { useClerkUser } from '@/providers/ClerkUserProvider'
 import { Download, MonitorPlay } from 'lucide-react'
 import React, { useCallback, useState } from 'react'
+
+const openDesktopAppDownload = () => {
+  window.open(DESKTOP_APP_DOWNLOAD_URL, '_blank')
+}
 
 type Props = {
   trigger?: React.ReactNode
@@ -79,15 +83,14 @@ export const DesktopAppLauncher = ({ trigger, onLaunch }: Props) => {
               <MonitorPlay className="h-4 w-4" />
               Open Desktop App
             </Button>
-            <Button asChild variant="outline" className="btn-clipflow-outline w-full gap-2">
-              <a
-                href={DESKTOP_APP_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Download className="h-4 w-4" />
-                Download Desktop App
-              </a>
+            <Button
+              type="button"
+              variant="outline"
+              className="btn-clipflow-outline w-full gap-2"
+              onClick={openDesktopAppDownload}
+            >
+              <Download className="h-4 w-4" />
+              Download Desktop App
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -96,22 +99,24 @@ export const DesktopAppLauncher = ({ trigger, onLaunch }: Props) => {
   )
 }
 
-export const DesktopDownloadLink = ({
-  children,
-  className,
-  'aria-label': ariaLabel,
-}: {
-  children: React.ReactNode
-  className?: string
-  'aria-label'?: string
-}) => (
-  <a
-    href={DESKTOP_APP_DOWNLOAD_URL}
-    target="_blank"
-    rel="noopener noreferrer"
+export const DesktopDownloadLink = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentPropsWithoutRef<'button'>
+>(({ children, className, onClick, ...props }, ref) => (
+  <button
+    ref={ref}
+    type="button"
     className={className}
-    aria-label={ariaLabel}
+    onClick={(event) => {
+      onClick?.(event)
+      if (!event.defaultPrevented) {
+        openDesktopAppDownload()
+      }
+    }}
+    {...props}
   >
     {children}
-  </a>
-)
+  </button>
+))
+
+DesktopDownloadLink.displayName = 'DesktopDownloadLink'
