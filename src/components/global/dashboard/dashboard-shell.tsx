@@ -2,7 +2,7 @@ import React from 'react'
 import { onAuthenticateUser } from '@/actions/user'
 import { getWorkSpaces, verifyAccessToWorkspace } from '@/actions/workspace'
 import { getJoinedWorkspaces } from '@/actions/collab-workspace'
-import { getUnreadNotificationCount } from '@/actions/notifications'
+import { getUserNotifications } from '@/actions/notifications'
 import { redirect } from 'next/navigation'
 import {
   dehydrate,
@@ -56,8 +56,8 @@ const DashboardShell = async ({
       queryFn: () => getJoinedWorkspaces(),
     }),
     query.prefetchQuery({
-      queryKey: ['notifications-unread'],
-      queryFn: () => getUnreadNotificationCount(),
+      queryKey: ['user-notifications'],
+      queryFn: () => getUserNotifications(),
     }),
   ])
 

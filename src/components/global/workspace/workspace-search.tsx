@@ -1,44 +1,34 @@
 'use client'
 
-import { searchWorkspace } from '@/actions/workspace-search'
+import { globalSearch } from '@/actions/global-search'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { PERSONAL_ROUTE } from '@/lib/personal-library'
 import { useQuery } from '@tanstack/react-query'
 import {
   ClipboardList,
-  MessageCircle,
-  MessageSquare,
-  Search,
-  Users,
-  Video as VideoIcon,
+  FolderOpen,
+  LayoutGrid,
   Loader2,
+  Search,
+  Video as VideoIcon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react'
 
-type SearchResults = {
-  videos: { id: string; title: string | null }[]
-  tasks: {
+type SearchData = {
+  personalVideos: { id: string; title: string | null }[]
+  personalFolders: { id: string; name: string }[]
+  workspaces: { id: string; name: string }[]
+  workspaceVideos: {
+    id: string
+    title: string | null
+    workSpaceId: string | null
+  }[]
+  workspaceTasks: {
     id: string
     title: string
+    workSpaceId: string
     status: string
-    priority: string
-  }[]
-  comments: {
-    id: string
-    content: string
-    videoId: string
-    User: { firstname: string | null; lastname: string | null } | null
-  }[]
-  members: {
-    id: string
-    firstname: string | null
-    lastname: string | null
-    email: string
-  }[]
-  messages: {
-    id: string
-    content: string
-    User: { firstname: string | null; lastname: string | null } | null
   }[]
 }
 
@@ -49,7 +39,7 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
   const [debounced, setDebounced] = useState('')
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(term.trim()), 250)
+    const t = setTimeout(() => setDebounced(term.trim()), 150)
     return () => clearTimeout(t)
   }, [term])
 
@@ -65,20 +55,21 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
   }, [])
 
   const { data, isFetching } = useQuery({
-    queryKey: ['workspace-search', workspaceId, debounced],
-    queryFn: () => searchWorkspace(workspaceId, debounced),
+    queryKey: ['global-search', debounced],
+    queryFn: () => globalSearch(debounced),
     enabled: open && debounced.length > 0,
+    staleTime: 30_000,
   })
 
-  const results = (data as { data: SearchResults } | undefined)?.data
+  const results = (data as { data: SearchData } | undefined)?.data
   const total = useMemo(() => {
     if (!results) return 0
     return (
-      results.videos.length +
-      results.tasks.length +
-      results.comments.length +
-      results.members.length +
-      results.messages.length
+      results.personalVideos.length +
+      results.personalFolders.length +
+      results.workspaces.length +
+      results.workspaceVideos.length +
+      results.workspaceTasks.length
     )
   }, [results])
 
@@ -88,6 +79,9 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
     router.push(path)
   }
 
+  const resolveWorkspaceId = (id: string | null) =>
+    id && id !== PERSONAL_ROUTE ? id : workspaceId !== PERSONAL_ROUTE ? workspaceId : null
+
   return (
     <>
       <button
@@ -96,7 +90,7 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
         className="flex w-full max-w-lg items-center gap-3 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm transition-colors hover:border-[#7C3AED]/40"
       >
         <Search size={18} className="shrink-0" />
-        <span className="flex-1 text-left">Search this workspace...</span>
+        <span className="flex-1 truncate text-left">Search videos, folders, workspaces...</span>
         <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium sm:inline-block">
           ⌘K
         </kbd>
@@ -104,14 +98,14 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">Workspace search</DialogTitle>
+          <DialogTitle className="sr-only">Global search</DialogTitle>
           <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               autoFocus
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="Search videos, tasks, comments, members, messages..."
+              placeholder="Search personal library and workspaces..."
               className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {isFetching && (
@@ -122,7 +116,7 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
           <div className="max-h-[60vh] overflow-y-auto p-2">
             {debounced.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Start typing to search across the workspace.
+                Search your personal library and workspaces.
               </p>
             ) : total === 0 && !isFetching ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
@@ -131,46 +125,49 @@ const WorkspaceSearch = ({ workspaceId }: { workspaceId: string }) => {
             ) : (
               <div className="space-y-3">
                 <ResultGroup
-                  label="Videos"
+                  label="Personal · Videos"
                   icon={VideoIcon}
-                  items={results?.videos ?? []}
+                  items={results?.personalVideos ?? []}
                   render={(v) => v.title ?? 'Untitled video'}
                   onSelect={(v) =>
-                    go(`/dashboard/${workspaceId}/video/${v.id}`)
+                    go(`/dashboard/${PERSONAL_ROUTE}/video/${v.id}`)
                   }
                 />
                 <ResultGroup
-                  label="Tasks"
+                  label="Personal · Folders"
+                  icon={FolderOpen}
+                  items={results?.personalFolders ?? []}
+                  render={(f) => f.name}
+                  onSelect={(f) =>
+                    go(`/dashboard/${PERSONAL_ROUTE}/folder/${f.id}`)
+                  }
+                />
+                <ResultGroup
+                  label="Workspaces"
+                  icon={LayoutGrid}
+                  items={results?.workspaces ?? []}
+                  render={(w) => w.name}
+                  onSelect={(w) => go(`/dashboard/${w.id}/workspace`)}
+                />
+                <ResultGroup
+                  label="Workspace · Videos"
+                  icon={VideoIcon}
+                  items={results?.workspaceVideos ?? []}
+                  render={(v) => v.title ?? 'Untitled video'}
+                  onSelect={(v) => {
+                    const wsId = resolveWorkspaceId(v.workSpaceId)
+                    if (wsId) go(`/dashboard/${wsId}/video/${v.id}`)
+                  }}
+                />
+                <ResultGroup
+                  label="Workspace · Tasks"
                   icon={ClipboardList}
-                  items={results?.tasks ?? []}
+                  items={results?.workspaceTasks ?? []}
                   render={(t) => t.title}
-                  meta={(t) => t.priority}
-                  onSelect={() => go(`/dashboard/${workspaceId}/workspace`)}
-                />
-                <ResultGroup
-                  label="Comments"
-                  icon={MessageSquare}
-                  items={results?.comments ?? []}
-                  render={(c) => c.content}
-                  onSelect={(c) =>
-                    go(`/dashboard/${workspaceId}/video/${c.videoId}`)
+                  meta={(t) => t.status.replace('_', ' ')}
+                  onSelect={(t) =>
+                    go(`/dashboard/${t.workSpaceId}/workspace`)
                   }
-                />
-                <ResultGroup
-                  label="Members"
-                  icon={Users}
-                  items={results?.members ?? []}
-                  render={(m) =>
-                    `${m.firstname ?? ''} ${m.lastname ?? ''}`.trim() || m.email
-                  }
-                  onSelect={() => go(`/dashboard/${workspaceId}/workspace`)}
-                />
-                <ResultGroup
-                  label="Messages"
-                  icon={MessageCircle}
-                  items={results?.messages ?? []}
-                  render={(m) => m.content}
-                  onSelect={() => go(`/dashboard/${workspaceId}/workspace`)}
                 />
               </div>
             )}

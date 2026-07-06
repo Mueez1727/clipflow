@@ -66,7 +66,6 @@ const Notifications = () => {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
-    queryClient.invalidateQueries({ queryKey: ['user-notifications-list'] })
     queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
   }
 

@@ -30,8 +30,8 @@ export const useMutationData = <TVariables>(
         }
       )
     },
-    onSettled: async () => {
-      return await client.invalidateQueries({
+    onSettled: () => {
+      void client.invalidateQueries({
         queryKey: [queryKey],
         exact: true,
       })

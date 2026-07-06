@@ -17,16 +17,18 @@ type Props = {
 
 const InfoBar = ({ workspaceId, role }: Props) => {
   return (
-    <header className="fixed z-40 grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border bg-background/95 p-3 backdrop-blur-xl sm:gap-4 sm:p-4 md:pl-[265px]">
-      <UserProfileChip role={role} className="hidden shrink-0 md:flex" />
+    <header className="fixed z-40 flex w-full items-center border-b border-border bg-background/95 p-3 backdrop-blur-xl sm:gap-4 sm:p-4 md:pl-[265px]">
+      <div className="flex shrink-0 items-center">
+        <UserProfileChip role={role} className="hidden md:flex" />
+      </div>
 
-      <div className="flex min-w-0 justify-center px-2">
-        <div className="w-full max-w-xl">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 px-16 sm:px-24 md:px-32">
+        <div className="pointer-events-auto mx-auto w-full">
           <WorkspaceSearch workspaceId={workspaceId} />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
+      <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-3">
         <DesktopDownloadLink
           className={`${iconButton} hidden sm:flex`}
           aria-label="Download Desktop App"

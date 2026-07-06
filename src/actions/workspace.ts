@@ -5,6 +5,8 @@ import {
   getOrCreatePersonalStorage,
   personalVideoWhere,
 } from '@/lib/personal-library'
+import { computeTotalStorageBytes } from '@/lib/storage-utils'
+import { formatBytes } from '@/lib/utils'
 import {
   getCurrentDbUser,
   notifyWorkspaceMembers,
@@ -535,7 +537,7 @@ export const getDashboardStats = async (workSpaceId: string) => {
       dbUser.firstname
     )
 
-    const [totalVideos, totalFolders, videosProcessed, workspaceCount] =
+    const [totalVideos, totalFolders, videosProcessed, workspaceCount, videoSources] =
       await Promise.all([
         client.video.count({ where: videoWhere }),
         client.folder.count({
@@ -551,7 +553,15 @@ export const getDashboardStats = async (workSpaceId: string) => {
             ],
           },
         }),
+        client.video.findMany({
+          where: videoWhere,
+          select: { source: true },
+        }),
       ])
+
+    const storageBytes = await computeTotalStorageBytes(
+      videoSources.map((v) => v.source).filter(Boolean)
+    )
 
     return {
       status: 200,
@@ -560,7 +570,7 @@ export const getDashboardStats = async (workSpaceId: string) => {
         totalFolders,
         videosProcessed,
         workspaceCount,
-        storageUsed: null as string | null,
+        storageUsed: formatBytes(storageBytes),
       },
     }
   } catch (error) {

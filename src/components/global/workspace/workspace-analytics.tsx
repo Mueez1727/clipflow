@@ -8,11 +8,9 @@ import {
   CheckCircle2,
   Clock,
   Crown,
-  HardDrive,
   ListTodo,
   Share2,
   Users,
-  Video,
 } from 'lucide-react'
 import React from 'react'
 import {
@@ -31,10 +29,8 @@ type AnalyticsData = {
   status: number
   data: {
     cards: {
-      videosThisWeek: number
       videosShared: number
-      watchTime: string | null
-      storageUsed: string | null
+      watchTime: string
       members: number
       mostActiveMember: string | null
       tasksCompleted: number
@@ -86,8 +82,8 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
   if (isPending || !analytics) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full rounded-2xl" />
           ))}
         </div>
@@ -104,13 +100,6 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
 
   const cardConfig = [
     {
-      title: 'Videos This Week',
-      value: cards.videosThisWeek,
-      icon: Video,
-      gradient: 'bg-gradient-to-br from-violet-500/10 to-transparent',
-      iconColor: 'text-violet-500',
-    },
-    {
       title: 'Videos Shared',
       value: cards.videosShared,
       icon: Share2,
@@ -119,17 +108,10 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
     },
     {
       title: 'Total Watch Time',
-      value: cards.watchTime ?? '—',
+      value: cards.watchTime,
       icon: Clock,
       gradient: 'bg-gradient-to-br from-cyan-500/10 to-transparent',
       iconColor: 'text-cyan-500',
-    },
-    {
-      title: 'Storage Used',
-      value: cards.storageUsed ?? '—',
-      icon: HardDrive,
-      gradient: 'bg-gradient-to-br from-emerald-500/10 to-transparent',
-      iconColor: 'text-emerald-500',
     },
     {
       title: 'Workspace Members',
@@ -163,7 +145,7 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {cardConfig.map((c) => (
           <StatCard key={c.title} {...c} />
         ))}

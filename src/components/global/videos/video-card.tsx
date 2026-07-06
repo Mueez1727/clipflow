@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { VIDEO_ACTION_BTN } from '@/lib/video-action-styles'
 import Loader from '../loader'
 import CardMenu from './video-card-menu'
 import WorkspaceVideoActions from './workspace-video-actions'
@@ -93,7 +94,11 @@ const VideoCard = (props: Props) => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div onClick={(e) => e.stopPropagation()}>
-                      <CopyLink videoId={props.id} variant="ghost" iconOnly />
+                      <CopyLink
+                        videoId={props.id}
+                        iconOnly
+                        className={VIDEO_ACTION_BTN}
+                      />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>Copy Link</TooltipContent>

@@ -130,7 +130,6 @@ const WorkspaceVideoActions = ({
             <div onClick={(e) => e.stopPropagation()}>
               <CopyLink
                 videoId={videoId}
-                variant="ghost"
                 iconOnly
                 className={VIDEO_ACTION_BTN}
               />

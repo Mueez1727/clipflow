@@ -33,7 +33,7 @@ export const getUserNotifications = async () => {
       read: n.read,
       link: n.link,
       workSpaceId: n.workSpaceId,
-      createdAt: n.createdAt,
+      createdAt: n.createdAt.toISOString(),
       actor: n.actorId ? actorMap.get(n.actorId) ?? null : null,
     }))
 

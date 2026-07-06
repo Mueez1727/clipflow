@@ -46,9 +46,8 @@ const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
     const tasksKey = [`workspace-tasks-${workspaceId}`] as const
 
     const refreshNotifications = () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
-      queryClient.invalidateQueries({ queryKey: ['user-notifications-list'] })
       queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
     }
 
     const refreshComments = (payload: unknown) => {

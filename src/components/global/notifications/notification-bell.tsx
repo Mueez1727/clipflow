@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  getUnreadNotificationCount,
   getUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -44,6 +43,12 @@ type NotificationItem = {
   } | null
 }
 
+type NotificationResult = {
+  status: number
+  data: NotificationItem[]
+  unread: number
+}
+
 const TYPE_ICON: Record<string, { icon: LucideIcon; color: string }> = {
   WORKSPACE_JOINED: { icon: UserPlus, color: 'bg-pink-500/10 text-pink-500' },
   WORKSPACE_LEFT: { icon: UserPlus, color: 'bg-orange-500/10 text-orange-500' },
@@ -69,26 +74,26 @@ const NotificationBell = () => {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
 
-  const { data: countData } = useQueryData(
-    ['notifications-unread'],
-    getUnreadNotificationCount
-  )
-  const unread = (countData as { data: number } | undefined)?.data ?? 0
-
-  const { data, isPending, isFetching } = useQueryData(
-    ['user-notifications-list'],
+  const { data, isPending, isFetching, refetch } = useQueryData(
+    ['user-notifications'],
     getUserNotifications,
-    open
+    true,
+    { staleTime: 30_000, refetchOnWindowFocus: true }
   )
-  const result = data as
-    | { status: number; data: NotificationItem[]; unread: number }
-    | undefined
+
+  const result = data as NotificationResult | undefined
   const notifications = result?.data ?? []
+  const unread = result?.unread ?? 0
   const loadingList = open && (isPending || (isFetching && !result))
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['user-notifications-list'] })
+    queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
     queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (next) void refetch()
   }
 
   const onOpen = async (item: NotificationItem) => {
@@ -106,7 +111,7 @@ const NotificationBell = () => {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"

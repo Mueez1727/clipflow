@@ -1,9 +1,11 @@
 'use server'
 
+import { formatDurationWithSeconds } from '@/lib/utils'
 import { client } from '@/lib/prisma'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const AVG_VIEW_SECONDS = 45
 
 const buildWeekBuckets = () => {
   const buckets: { label: string; start: number; end: number; value: number }[] =
@@ -42,20 +44,17 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
 
     const [
       workspace,
-      videosThisWeek,
       videosShared,
       tasksCompleted,
       pendingTasks,
       recentVideos,
       recentActivities,
       mostActiveGroup,
+      allVideos,
     ] = await Promise.all([
       client.workSpace.findUnique({
         where: { id: workspaceId },
         select: { _count: { select: { members: true } } },
-      }),
-      client.video.count({
-        where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
       }),
       client.sharedVideo.count({ where: { workSpaceId: workspaceId } }),
       client.task.count({
@@ -79,6 +78,10 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
         orderBy: { _count: { userId: 'desc' } },
         take: 1,
       }),
+      client.video.findMany({
+        where: { workSpaceId: workspaceId },
+        select: { views: true },
+      }),
     ])
 
     let mostActiveMember: string | null = null
@@ -95,6 +98,10 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
     }
 
     const totalViews = recentVideos.reduce((sum, v) => sum + v.views, 0)
+    const totalWatchSeconds = allVideos.reduce(
+      (sum, v) => sum + v.views * AVG_VIEW_SECONDS,
+      0
+    )
 
     const weeklyUploads = bucketize(recentVideos.map((v) => v.createdAt))
     const weeklyActivity = bucketize(recentActivities.map((a) => a.createdAt))
@@ -103,10 +110,8 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       status: 200,
       data: {
         cards: {
-          videosThisWeek,
           videosShared,
-          watchTime: null as string | null,
-          storageUsed: null as string | null,
+          watchTime: formatDurationWithSeconds(totalWatchSeconds),
           members: workspace?._count.members ?? 0,
           mostActiveMember,
           tasksCompleted,
@@ -124,10 +129,8 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       status: 500,
       data: {
         cards: {
-          videosThisWeek: 0,
           videosShared: 0,
-          watchTime: null as string | null,
-          storageUsed: null as string | null,
+          watchTime: '0s',
           members: 0,
           mostActiveMember: null,
           tasksCompleted: 0,
