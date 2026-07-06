@@ -7,7 +7,7 @@ import type {
 } from '@/lib/socket/events'
 import { useSocket, useSocketWorkspace } from '@/hooks/useSocket'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 type SocketRealtimeBridgeProps = {
   workspaceId: string
@@ -37,6 +37,9 @@ const isCommentEvent = (
 const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
   const { on, isConnected } = useSocket()
   const queryClient = useQueryClient()
+  const invalidateTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  )
 
   useSocketWorkspace(workspaceId)
 
@@ -45,17 +48,27 @@ const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
 
     const tasksKey = [`workspace-tasks-${workspaceId}`] as const
 
+    const debouncedInvalidate = (queryKey: readonly unknown[], delay = 350) => {
+      const key = JSON.stringify(queryKey)
+      const existing = invalidateTimers.current.get(key)
+      if (existing) clearTimeout(existing)
+      invalidateTimers.current.set(
+        key,
+        setTimeout(() => {
+          invalidateTimers.current.delete(key)
+          void queryClient.invalidateQueries({ queryKey: [...queryKey] })
+        }, delay)
+      )
+    }
+
     const refreshNotifications = () => {
-      queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
-      queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
+      debouncedInvalidate(['user-notifications'])
     }
 
     const refreshComments = (payload: unknown) => {
       if (!isCommentEvent(payload, workspaceId)) return
-      queryClient.invalidateQueries({
-        queryKey: [`workspace-video-comments-${payload.videoId}`],
-      })
-      queryClient.invalidateQueries({ queryKey: ['video-comments'] })
+      debouncedInvalidate([`workspace-video-comments-${payload.videoId}`])
+      debouncedInvalidate(['video-comments'])
     }
 
     const forWorkspace =
@@ -68,39 +81,27 @@ const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
       on(
         SOCKET_EVENTS.receiveMessage,
         forWorkspace(() =>
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-messages', workspaceId],
-          })
+          debouncedInvalidate(['workspace-messages', workspaceId])
         )
       ),
       on(
         SOCKET_EVENTS.videoShared,
         forWorkspace(() => {
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-videos', workspaceId],
-          })
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-overview', workspaceId],
-          })
+          debouncedInvalidate(['workspace-videos', workspaceId])
+          debouncedInvalidate(['workspace-overview', workspaceId])
         })
       ),
       on(
         SOCKET_EVENTS.videoRemoved,
         forWorkspace(() => {
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-videos', workspaceId],
-          })
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-overview', workspaceId],
-          })
+          debouncedInvalidate(['workspace-videos', workspaceId])
+          debouncedInvalidate(['workspace-overview', workspaceId])
         })
       ),
       on(
         SOCKET_EVENTS.videoUpdated,
         forWorkspace(() =>
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-videos', workspaceId],
-          })
+          debouncedInvalidate(['workspace-videos', workspaceId])
         )
       ),
       on(SOCKET_EVENTS.commentAdded, refreshComments),
@@ -109,43 +110,29 @@ const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
       on(SOCKET_EVENTS.timestampComment, refreshComments),
       on(
         SOCKET_EVENTS.taskCreated,
-        forWorkspace(() =>
-          queryClient.invalidateQueries({ queryKey: [...tasksKey] })
-        )
+        forWorkspace(() => debouncedInvalidate([...tasksKey]))
       ),
       on(
         SOCKET_EVENTS.taskUpdated,
-        forWorkspace(() =>
-          queryClient.invalidateQueries({ queryKey: [...tasksKey] })
-        )
+        forWorkspace(() => debouncedInvalidate([...tasksKey]))
       ),
       on(
         SOCKET_EVENTS.taskDeleted,
-        forWorkspace(() =>
-          queryClient.invalidateQueries({ queryKey: [...tasksKey] })
-        )
+        forWorkspace(() => debouncedInvalidate([...tasksKey]))
       ),
       on(
         SOCKET_EVENTS.taskMoved,
-        forWorkspace(() =>
-          queryClient.invalidateQueries({ queryKey: [...tasksKey] })
-        )
+        forWorkspace(() => debouncedInvalidate([...tasksKey]))
       ),
       on(
         SOCKET_EVENTS.assignTask,
-        forWorkspace(() =>
-          queryClient.invalidateQueries({ queryKey: [...tasksKey] })
-        )
+        forWorkspace(() => debouncedInvalidate([...tasksKey]))
       ),
       on(
         SOCKET_EVENTS.workspaceActivity,
         forWorkspace(() => {
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-activity', workspaceId],
-          })
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-analytics', workspaceId],
-          })
+          debouncedInvalidate(['workspace-activity', workspaceId])
+          debouncedInvalidate(['workspace-analytics', workspaceId])
         })
       ),
       on(SOCKET_EVENTS.newNotification, refreshNotifications),
@@ -154,31 +141,28 @@ const SocketRealtimeBridge = ({ workspaceId }: SocketRealtimeBridgeProps) => {
       on(
         SOCKET_EVENTS.memberOnline,
         forWorkspace(() =>
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-members', workspaceId],
-          })
+          debouncedInvalidate(['workspace-members', workspaceId])
         )
       ),
       on(
         SOCKET_EVENTS.memberOffline,
         forWorkspace(() =>
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-members', workspaceId],
-          })
+          debouncedInvalidate(['workspace-members', workspaceId])
         )
       ),
       on(
         SOCKET_EVENTS.presenceState,
         forWorkspace(() =>
-          queryClient.invalidateQueries({
-            queryKey: ['workspace-members', workspaceId],
-          })
+          debouncedInvalidate(['workspace-members', workspaceId])
         )
       ),
     ]
 
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe())
+      const timers = invalidateTimers.current
+      timers.forEach((timer) => clearTimeout(timer))
+      timers.clear()
     }
   }, [isConnected, on, queryClient, workspaceId])
 

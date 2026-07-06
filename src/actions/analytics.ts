@@ -38,6 +38,50 @@ const bucketize = (dates: Date[]) => {
   return buckets.map(({ label, value }) => ({ label, value }))
 }
 
+const buildWeeklyWorkspaceActivity = async (
+  workspaceId: string,
+  weekAgo: Date
+) => {
+  const [
+    activities,
+    uploadedVideos,
+    tasksCreated,
+    deleteEvents,
+  ] = await Promise.all([
+    client.activity.findMany({
+      where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
+      select: { createdAt: true },
+    }),
+    client.video.findMany({
+      where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
+      select: { createdAt: true },
+    }),
+    client.task.findMany({
+      where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
+      select: { createdAt: true },
+    }),
+    client.notification.findMany({
+      where: {
+        workSpaceId: workspaceId,
+        type: 'VIDEO_DELETED',
+        createdAt: { gte: weekAgo },
+      },
+      select: { createdAt: true },
+    }),
+  ])
+
+  // Activity log covers shares, joins, leaves, task completions, comments, etc.
+  // Supplement with uploads, task creates, and deletes not always logged to activity.
+  const eventDates = [
+    ...activities.map((a) => a.createdAt),
+    ...uploadedVideos.map((v) => v.createdAt),
+    ...tasksCreated.map((t) => t.createdAt),
+    ...deleteEvents.map((n) => n.createdAt),
+  ]
+
+  return bucketize(eventDates)
+}
+
 export const getWorkspaceAnalytics = async (workspaceId: string) => {
   try {
     const weekAgo = new Date(Date.now() - 7 * DAY_MS)
@@ -47,10 +91,10 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       videosShared,
       tasksCompleted,
       pendingTasks,
-      recentVideos,
       recentActivities,
       mostActiveGroup,
       allVideos,
+      weeklyWorkspaceActivity,
     ] = await Promise.all([
       client.workSpace.findUnique({
         where: { id: workspaceId },
@@ -62,10 +106,6 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       }),
       client.task.count({
         where: { workSpaceId: workspaceId, status: { not: 'DONE' } },
-      }),
-      client.video.findMany({
-        where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
-        select: { createdAt: true, views: true },
       }),
       client.activity.findMany({
         where: { workSpaceId: workspaceId, createdAt: { gte: weekAgo } },
@@ -82,6 +122,7 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
         where: { workSpaceId: workspaceId },
         select: { views: true },
       }),
+      buildWeeklyWorkspaceActivity(workspaceId, weekAgo),
     ])
 
     let mostActiveMember: string | null = null
@@ -97,13 +138,12 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       }
     }
 
-    const totalViews = recentVideos.reduce((sum, v) => sum + v.views, 0)
+    const totalViews = allVideos.reduce((sum, v) => sum + v.views, 0)
     const totalWatchSeconds = allVideos.reduce(
       (sum, v) => sum + v.views * AVG_VIEW_SECONDS,
       0
     )
 
-    const weeklyUploads = bucketize(recentVideos.map((v) => v.createdAt))
     const weeklyActivity = bucketize(recentActivities.map((a) => a.createdAt))
 
     return {
@@ -118,9 +158,8 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
           pendingTasks,
           totalViews,
         },
-        weeklyUploads,
+        weeklyWorkspaceActivity,
         weeklyActivity,
-        recordingTrend: weeklyUploads,
       },
     }
   } catch (error) {
@@ -137,9 +176,8 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
           pendingTasks: 0,
           totalViews: 0,
         },
-        weeklyUploads: [],
+        weeklyWorkspaceActivity: [],
         weeklyActivity: [],
-        recordingTrend: [],
       },
     }
   }

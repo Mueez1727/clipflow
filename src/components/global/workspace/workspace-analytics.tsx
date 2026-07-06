@@ -37,9 +37,8 @@ type AnalyticsData = {
       pendingTasks: number
       totalViews: number
     }
-    weeklyUploads: { label: string; value: number }[]
+    weeklyWorkspaceActivity: { label: string; value: number }[]
     weeklyActivity: { label: string; value: number }[]
-    recordingTrend: { label: string; value: number }[]
   }
 }
 
@@ -74,7 +73,9 @@ const ChartCard = ({
 const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
   const { data, isPending } = useQueryData(
     ['workspace-analytics', workspaceId],
-    () => getWorkspaceAnalytics(workspaceId)
+    () => getWorkspaceAnalytics(workspaceId),
+    true,
+    { staleTime: 60_000 }
   )
 
   const analytics = (data as AnalyticsData | undefined)?.data
@@ -152,9 +153,9 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Weekly Uploads">
+        <ChartCard title="Workspace Activity">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={analytics.weeklyUploads}>
+            <BarChart data={analytics.weeklyWorkspaceActivity}>
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b833" vertical={false} />
               <XAxis dataKey="label" {...chartAxis} />
               <YAxis allowDecimals={false} {...chartAxis} width={28} />
@@ -164,7 +165,7 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Workspace Activity">
+        <ChartCard title="Engagement Trend">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={analytics.weeklyActivity}>
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b833" vertical={false} />
@@ -187,4 +188,4 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
   )
 }
 
-export default WorkspaceAnalytics
+export default React.memo(WorkspaceAnalytics)

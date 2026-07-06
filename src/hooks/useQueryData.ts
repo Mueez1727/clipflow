@@ -20,9 +20,9 @@ export const useQueryData = (
     queryKey,
     queryFn,
     enabled,
-    staleTime: options?.staleTime,
+    staleTime: options?.staleTime ?? 30_000,
     gcTime: options?.gcTime,
-    refetchOnWindowFocus: options?.refetchOnWindowFocus,
+    refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
   })
   return { data, isPending, isFetched, refetch, isFetching }
 }

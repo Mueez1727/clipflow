@@ -10,7 +10,18 @@ const ClerkUserContext = createContext<ClerkUserContextValue | null>(null)
 export const ClerkUserProvider = ({ children }: { children: React.ReactNode }) => {
   const clerkUser = useUser()
 
-  const value = useMemo(() => clerkUser, [clerkUser])
+  const value = useMemo(
+    () => clerkUser,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-render when identity fields change
+    [
+      clerkUser.isLoaded,
+      clerkUser.isSignedIn,
+      clerkUser.user?.id,
+      clerkUser.user?.fullName,
+      clerkUser.user?.firstName,
+      clerkUser.user?.imageUrl,
+    ]
+  )
 
   return (
     <ClerkUserContext.Provider value={value}>{children}</ClerkUserContext.Provider>

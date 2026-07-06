@@ -956,28 +956,51 @@ export const howToPost = async () => {
   }
 }
 
+const VISION_PROMPT = `Analyze this video frame and describe:
+1. What is visible on screen
+2. What appears to be happening
+3. Any readable text (OCR)
+4. Any people, objects, or UI elements present
+
+Write a clear, concise paragraph suitable for a video transcript panel.`
+
+const FALLBACK_TRANSCRIPT =
+  'We could not generate a visual description for this video right now. Please try again in a moment.'
+
 export const generateVideoTranscript = async (
   videoId: string,
   frameDataUrl: string
 ) => {
   try {
     const user = await currentUser()
-    if (!user) return { status: 403, data: 'Unauthorized' }
+    if (!user) {
+      return { status: 200, data: FALLBACK_TRANSCRIPT, fallback: true }
+    }
 
     const apiKey = process.env.OPEN_AI_KEY
     if (!apiKey) {
-      return { status: 503, data: 'AI service is not configured' }
+      return {
+        status: 200,
+        data: 'AI description is not configured. Add OPEN_AI_KEY to enable visual transcripts.',
+        fallback: true,
+      }
     }
 
     if (!frameDataUrl?.startsWith('data:image/')) {
-      return { status: 400, data: 'Invalid frame image' }
+      return {
+        status: 200,
+        data: 'Could not capture a valid frame from this video. Try playing the video first, then generate again.',
+        fallback: true,
+      }
     }
 
     const video = await client.video.findUnique({
       where: { id: videoId },
       select: { summary: true },
     })
-    if (!video) return { status: 404, data: 'Video not found' }
+    if (!video) {
+      return { status: 200, data: FALLBACK_TRANSCRIPT, fallback: true }
+    }
 
     const visionRes = await fetch(
       'https://api.z.ai/api/paas/v4/chat/completions',
@@ -993,10 +1016,7 @@ export const generateVideoTranscript = async (
             {
               role: 'user',
               content: [
-                {
-                  type: 'text',
-                  text: 'Describe everything visible in this frame in detail.',
-                },
+                { type: 'text', text: VISION_PROMPT },
                 {
                   type: 'image_url',
                   image_url: { url: frameDataUrl },
@@ -1010,23 +1030,25 @@ export const generateVideoTranscript = async (
 
     if (!visionRes.ok) {
       console.log('Vision API error', await visionRes.text())
-      return { status: 500, data: 'Transcript generation failed' }
+      return { status: 200, data: FALLBACK_TRANSCRIPT, fallback: true }
     }
 
     const payload = (await visionRes.json()) as {
       choices?: { message?: { content?: string } }[]
     }
     const text = payload.choices?.[0]?.message?.content?.trim()
-    if (!text) return { status: 500, data: 'Empty transcript returned' }
+    if (!text) {
+      return { status: 200, data: FALLBACK_TRANSCRIPT, fallback: true }
+    }
 
     await client.video.update({
       where: { id: videoId },
       data: { summary: text },
     })
 
-    return { status: 200, data: text }
+    return { status: 200, data: text, fallback: false }
   } catch (error) {
     console.log(error)
-    return { status: 500, data: 'Something went wrong' }
+    return { status: 200, data: FALLBACK_TRANSCRIPT, fallback: true }
   }
 }

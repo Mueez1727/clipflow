@@ -26,10 +26,14 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
   const pathName = usePathname()
   const dispatch = useDispatch()
 
-  const { data, isFetched } = useQueryData(['user-workspaces'], getWorkSpaces)
+  const { data, isFetched } = useQueryData(['user-workspaces'], getWorkSpaces, true, {
+    staleTime: 60_000,
+  })
   const { data: joinedData } = useQueryData(
     ['joined-workspaces'],
-    getJoinedWorkspaces
+    getJoinedWorkspaces,
+    true,
+    { staleTime: 60_000 }
   )
 
   const workspacePayload = (data as WorkspaceProps | undefined)?.data ?? {
@@ -138,4 +142,4 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
   )
 }
 
-export default Sidebar
+export default React.memo(Sidebar)
