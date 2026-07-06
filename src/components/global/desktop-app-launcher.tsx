@@ -13,7 +13,7 @@ import {
   DESKTOP_APP_DOWNLOAD_URL,
   buildDesktopRecordUrl,
 } from '@/constants/app'
-import { useUser } from '@clerk/nextjs'
+import { useClerkUser } from '@/providers/ClerkUserProvider'
 import { Download, MonitorPlay } from 'lucide-react'
 import React, { useCallback, useState } from 'react'
 
@@ -23,7 +23,7 @@ type Props = {
 }
 
 export const DesktopAppLauncher = ({ trigger, onLaunch }: Props) => {
-  const { user } = useUser()
+  const { user } = useClerkUser()
   const [open, setOpen] = useState(false)
 
   const tryLaunchDesktop = useCallback(() => {

@@ -7,6 +7,11 @@ import { ThemeProvider } from '@/components/theme'
 import ReactQueryProvider from '@/react-query'
 import { ReduxProvider } from '@/redux/provider'
 import { SocketProvider } from '@/providers/SocketProvider'
+import { ClerkUserProvider } from '@/providers/ClerkUserProvider'
+import {
+  clipflowClerkAppearance,
+  clipflowClerkLocalization,
+} from '@/lib/clerk-appearance'
 import { Toaster } from 'sonner'
 
 const manrope = DM_Sans({ subsets: ['latin'] })
@@ -23,24 +28,29 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={clipflowClerkAppearance}
+      localization={clipflowClerkLocalization}
+    >
       <html lang="en" suppressHydrationWarning>
         <body className={`${manrope.className} antialiased`}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            storageKey="clipflow-theme"
-          >
-            <ReduxProvider>
-              <ReactQueryProvider>
-                <SocketProvider>
-                  {children}
-                  <Toaster />
-                </SocketProvider>
-              </ReactQueryProvider>
-            </ReduxProvider>
-          </ThemeProvider>
+          <ClerkUserProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              storageKey="clipflow-theme"
+            >
+              <ReduxProvider>
+                <ReactQueryProvider>
+                  <SocketProvider>
+                    {children}
+                    <Toaster />
+                  </SocketProvider>
+                </ReactQueryProvider>
+              </ReduxProvider>
+            </ThemeProvider>
+          </ClerkUserProvider>
         </body>
       </html>
     </ClerkProvider>

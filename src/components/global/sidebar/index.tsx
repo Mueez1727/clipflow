@@ -94,7 +94,7 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
         <BrandLogo textClassName="text-xl" />
       </div>
 
-      <nav className="w-full shrink-0">
+      <nav className="mt-3 w-full shrink-0">
         <ul>
           {menuItems.map((item) => (
             <SidebarItem

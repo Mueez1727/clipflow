@@ -2,7 +2,7 @@
 
 import WorkspaceAvatar from '@/components/global/workspace/workspace-avatar'
 import { cn } from '@/lib/utils'
-import { useUser } from '@clerk/nextjs'
+import { useClerkUser } from '@/providers/ClerkUserProvider'
 import React from 'react'
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
 }
 
 const UserProfileChip = ({ role, className }: Props) => {
-  const { user } = useUser()
+  const { user } = useClerkUser()
   const userName = user?.fullName || user?.firstName || 'Your account'
 
   return (

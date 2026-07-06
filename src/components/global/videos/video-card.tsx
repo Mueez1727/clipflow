@@ -11,32 +11,11 @@ import {
 } from '@/components/ui/tooltip'
 import Loader from '../loader'
 import CardMenu from './video-card-menu'
+import WorkspaceVideoActions from './workspace-video-actions'
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dot, Pin, Share2, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { REVIEW_STATUS } from '@prisma/client'
-import VideoReviewControls from '../workspace/video-review-controls'
 import React from 'react'
-
-const REVIEW_BADGE: Record<REVIEW_STATUS, { label: string; className: string }> =
-  {
-    PENDING: {
-      label: 'Pending Review',
-      className: 'bg-slate-600/90 text-white dark:bg-slate-500/90',
-    },
-    NEEDS_CHANGES: {
-      label: 'Needs Changes',
-      className: 'bg-amber-500/90 text-white',
-    },
-    APPROVED: {
-      label: 'Approved',
-      className: 'bg-emerald-500/90 text-white',
-    },
-  }
-
-const actionWrap =
-  'flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background/95 text-foreground shadow-md backdrop-blur-sm transition-colors hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] dark:bg-card/95 dark:hover:bg-[#7C3AED]/20'
 
 type Props = {
   User: {
@@ -55,8 +34,8 @@ type Props = {
   processing: boolean
   workspaceId: string
   pinned?: boolean
-  reviewStatus?: REVIEW_STATUS
   showWorkspaceControls?: boolean
+  archived?: boolean
 }
 
 const VideoCard = (props: Props) => {
@@ -75,64 +54,52 @@ const VideoCard = (props: Props) => {
       state={props.processing}
     >
       <div className="group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-[#7C3AED]/30 hover:shadow-lg dark:hover:border-[#7C3AED]/40">
-        {props.showWorkspaceControls && (
-          <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
-            <span
-              className={cn(
-                'rounded-full px-2.5 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-sm',
-                REVIEW_BADGE[props.reviewStatus ?? 'PENDING'].className
-              )}
-            >
-              {REVIEW_BADGE[props.reviewStatus ?? 'PENDING'].label}
+        {props.showWorkspaceControls && props.pinned && (
+          <div className="absolute left-3 top-3 z-50">
+            <span className="flex items-center gap-1 rounded-full bg-[#7C3AED] px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+              <Pin className="h-2.5 w-2.5" />
+              Pinned
             </span>
-            {props.pinned && (
-              <span className="flex items-center gap-1 rounded-full bg-[#7C3AED] px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                <Pin className="h-2.5 w-2.5" />
-                Pinned
-              </span>
-            )}
           </div>
         )}
         <TooltipProvider delayDuration={200}>
           <div className="absolute right-3 top-3 z-50 hidden items-center gap-1.5 group-hover:flex">
-            {props.showWorkspaceControls && (
-              <VideoReviewControls
+            {props.showWorkspaceControls ? (
+              <WorkspaceVideoActions
                 videoId={props.id}
                 workspaceId={props.workspaceId}
-                reviewStatus={props.reviewStatus ?? 'PENDING'}
-                pinned={props.pinned ?? false}
+                pinned={props.pinned}
+                currentFolder={props.Folder?.id}
+                currentFolderName={props.Folder?.name}
               />
+            ) : (
+              <>
+                <CardMenu
+                  currentFolderName={props.Folder?.name}
+                  videoId={props.id}
+                  currentWorkspace={props.workspaceId}
+                  currentFolder={props.Folder?.id}
+                  showDelete
+                  showArchive={!props.archived}
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ShareVideo videoId={props.id} iconOnly />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Share</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <CopyLink videoId={props.id} variant="ghost" iconOnly />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy Link</TooltipContent>
+                </Tooltip>
+              </>
             )}
-            <CardMenu
-              currentFolderName={props.Folder?.name}
-              videoId={props.id}
-              currentWorkspace={props.workspaceId}
-              currentFolder={props.Folder?.id}
-              showDelete
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={actionWrap} onClick={(e) => e.stopPropagation()}>
-                  <ShareVideo
-                    videoId={props.id}
-                    className="h-auto bg-transparent p-0 hover:bg-transparent"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>Share</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={actionWrap} onClick={(e) => e.stopPropagation()}>
-                  <CopyLink
-                    className="h-auto border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
-                    videoId={props.id}
-                    variant="ghost"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>Copy Link</TooltipContent>
-            </Tooltip>
           </div>
         </TooltipProvider>
         <Link

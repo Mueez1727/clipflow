@@ -5,6 +5,10 @@ import {
   getOrCreatePersonalStorage,
   personalVideoWhere,
 } from '@/lib/personal-library'
+import {
+  getCurrentDbUser,
+  notifyWorkspaceMembers,
+} from '@/lib/server/workspace-helpers'
 import { currentUser } from '@clerk/nextjs/server'
 import { sendEmail } from './user'
 import { createClient, OAuthStrategy } from '@wix/sdk'
@@ -355,16 +359,39 @@ export const deleteVideo = async (videoId: string) => {
     const user = await currentUser()
     if (!user) return { status: 403, data: 'Unauthorized' }
 
+    const dbUser = await getCurrentDbUser()
+
     const video = await client.video.findFirst({
       where: {
         id: videoId,
         User: { clerkid: user.id },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        title: true,
+        sharedIn: { select: { workSpaceId: true } },
+      },
     })
     if (!video) return { status: 404, data: 'Video not found' }
 
     await client.video.delete({ where: { id: videoId } })
+
+    if (dbUser && video.sharedIn.length > 0) {
+      const actorName =
+        `${dbUser.firstname ?? ''} ${dbUser.lastname ?? ''}`.trim() || 'Someone'
+      await Promise.all(
+        video.sharedIn.map((share) =>
+          notifyWorkspaceMembers({
+            workspaceId: share.workSpaceId,
+            actorId: dbUser.id,
+            type: 'VIDEO_DELETED',
+            content: `${actorName} deleted "${video.title ?? 'a video'}"`,
+            link: `/dashboard/${share.workSpaceId}/workspace?tab=videos`,
+          })
+        )
+      )
+    }
+
     return { status: 200, data: 'Video deleted' }
   } catch (error) {
     console.log(error)
@@ -655,6 +682,17 @@ export const moveVideoLocation = async (
   folderId: string
 ) => {
   try {
+    const dbUser = await getCurrentDbUser()
+
+    const existing = await client.video.findUnique({
+      where: { id: videoId },
+      select: {
+        title: true,
+        sharedIn: { select: { workSpaceId: true } },
+        Folder: { select: { name: true } },
+      },
+    })
+
     const location = await client.video.update({
       where: {
         id: videoId,
@@ -664,6 +702,32 @@ export const moveVideoLocation = async (
         workSpaceId,
       },
     })
+
+    if (location && dbUser && existing) {
+      const folder = await client.folder.findUnique({
+        where: { id: folderId },
+        select: { name: true },
+      })
+      const actorName =
+        `${dbUser.firstname ?? ''} ${dbUser.lastname ?? ''}`.trim() || 'Someone'
+      const destination = folder?.name ?? 'library'
+      const workspaces = new Set(
+        existing.sharedIn.map((s) => s.workSpaceId)
+      )
+      await Promise.all(
+        Array.from(workspaces).map((wsId) =>
+          notifyWorkspaceMembers({
+            workspaceId: wsId,
+            actorId: dbUser.id,
+            type: 'VIDEO_MOVED',
+            content: `${actorName} moved "${existing.title ?? 'a video'}" to ${destination}`,
+            link: `/dashboard/${wsId}/workspace?tab=videos`,
+          })
+        )
+      )
+      return { status: 200, data: 'folder changed successfully' }
+    }
+
     if (location) return { status: 200, data: 'folder changed successfully' }
     return { status: 404, data: 'workspace/folder not found' }
   } catch (error) {
@@ -882,62 +946,67 @@ export const howToPost = async () => {
   }
 }
 
-export const generateVideoTranscript = async (videoId: string) => {
+export const generateVideoTranscript = async (
+  videoId: string,
+  frameDataUrl: string
+) => {
   try {
     const user = await currentUser()
     if (!user) return { status: 403, data: 'Unauthorized' }
 
     const apiKey = process.env.OPEN_AI_KEY
     if (!apiKey) {
-      return { status: 503, data: 'Transcription service is not configured' }
+      return { status: 503, data: 'AI service is not configured' }
+    }
+
+    if (!frameDataUrl?.startsWith('data:image/')) {
+      return { status: 400, data: 'Invalid frame image' }
     }
 
     const video = await client.video.findUnique({
       where: { id: videoId },
-      select: { summary: true, source: true, userId: true },
+      select: { summary: true },
     })
     if (!video) return { status: 404, data: 'Video not found' }
 
-    if (video.summary?.trim()) {
-      return { status: 200, data: video.summary }
-    }
-
-    const streamBase = process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL
-    if (!streamBase) {
-      return { status: 503, data: 'Video stream URL is not configured' }
-    }
-
-    const videoUrl = `${streamBase}/${video.source}`
-    const fileRes = await fetch(videoUrl)
-    if (!fileRes.ok) {
-      return { status: 400, data: 'Could not fetch video for transcription' }
-    }
-
-    const buffer = Buffer.from(await fileRes.arrayBuffer())
-    const form = new FormData()
-    form.append(
-      'file',
-      new Blob([buffer], { type: 'video/webm' }),
-      'recording.webm'
-    )
-    form.append('model', 'whisper-1')
-
-    const whisperRes = await fetch(
-      'https://api.openai.com/v1/audio/transcriptions',
+    const visionRes = await fetch(
+      'https://api.z.ai/api/paas/v4/chat/completions',
       {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: form,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'glm-4v-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Describe everything visible in this frame in detail.',
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: frameDataUrl },
+                },
+              ],
+            },
+          ],
+        }),
       }
     )
 
-    if (!whisperRes.ok) {
-      console.log('Whisper error', await whisperRes.text())
-      return { status: 500, data: 'Transcription failed' }
+    if (!visionRes.ok) {
+      console.log('Vision API error', await visionRes.text())
+      return { status: 500, data: 'Transcript generation failed' }
     }
 
-    const payload = (await whisperRes.json()) as { text?: string }
-    const text = payload.text?.trim()
+    const payload = (await visionRes.json()) as {
+      choices?: { message?: { content?: string } }[]
+    }
+    const text = payload.choices?.[0]?.message?.content?.trim()
     if (!text) return { status: 500, data: 'Empty transcript returned' }
 
     await client.video.update({

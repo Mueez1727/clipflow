@@ -178,7 +178,7 @@ export const leaveWorkspace = async (workspaceId: string) => {
       await createNotification({
         userId: workspace.userId,
         actorId: dbUser.id,
-        type: 'WORKSPACE_LEFT',
+        type: 'MEMBER_REMOVED',
         content: `${memberName} left "${workspace.name}"`,
         workspaceId,
         link: `/dashboard/${workspaceId}/workspace?tab=members`,

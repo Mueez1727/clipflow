@@ -12,48 +12,67 @@ const STEPS = [
   'Fetching User Data',
 ]
 
-const STEP_MS = 750
+const STEP_MS = 700
+const FINISH_DELAY_MS = 400
 
 const AuthCallbackClient = () => {
   const router = useRouter()
-  const [progress, setProgress] = useState(8)
+  const [progress, setProgress] = useState(5)
   const [step, setStep] = useState(0)
-  const [done, setDone] = useState(false)
+  const [allComplete, setAllComplete] = useState(false)
   const redirectRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     let progressTimer: ReturnType<typeof setInterval> | undefined
-    let stepTimer: ReturnType<typeof setInterval> | undefined
+
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, ms)
+      })
 
     const run = async () => {
-      const authPromise = completeAuthCallback()
-
       progressTimer = setInterval(() => {
         setProgress((prev) => {
-          if (done) return 100
-          return prev >= 92 ? 92 : prev + Math.random() * 4 + 1.5
+          if (prev >= 88) return prev
+          return prev + 1.2
         })
-      }, 220)
+      }, 120)
 
-      stepTimer = setInterval(() => {
-        setStep((prev) => (prev < STEPS.length - 1 ? prev + 1 : prev))
-      }, STEP_MS)
-
-      const result = await authPromise
+      const result = await completeAuthCallback()
       if (cancelled) return
 
       redirectRef.current = result.redirectTo
 
-      for (let i = step; i < STEPS.length; i++) {
+      for (let i = 0; i < STEPS.length; i++) {
         if (cancelled) return
         setStep(i)
-        await new Promise((r) => setTimeout(r, STEP_MS))
+        await sleep(STEP_MS)
       }
 
-      setDone(true)
-      setProgress(100)
-      await new Promise((r) => setTimeout(r, 450))
+      if (cancelled) return
+
+      setStep(STEPS.length)
+      setAllComplete(true)
+
+      if (progressTimer) clearInterval(progressTimer)
+
+      const start = performance.now()
+      const animateToFull = () => {
+        if (cancelled) return
+        const elapsed = performance.now() - start
+        const t = Math.min(elapsed / 600, 1)
+        setProgress(88 + t * 12)
+        if (t < 1) {
+          requestAnimationFrame(animateToFull)
+        } else {
+          setProgress(100)
+        }
+      }
+      requestAnimationFrame(animateToFull)
+
+      await sleep(650)
+      await sleep(FINISH_DELAY_MS)
 
       if (!cancelled && redirectRef.current) {
         router.replace(redirectRef.current)
@@ -65,9 +84,7 @@ const AuthCallbackClient = () => {
     return () => {
       cancelled = true
       if (progressTimer) clearInterval(progressTimer)
-      if (stepTimer) clearInterval(stepTimer)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   return (
@@ -86,15 +103,15 @@ const AuthCallbackClient = () => {
         <div className="w-full space-y-4">
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full clipflow-gradient transition-all duration-500 ease-out"
+              className="h-full rounded-full clipflow-gradient transition-[width] duration-300 ease-out"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
 
           <div className="space-y-3">
             {STEPS.map((label, index) => {
-              const stepDone = done || index < step
-              const active = !done && index === step
+              const stepDone = allComplete || index < step
+              const active = !allComplete && index === step
               return (
                 <div
                   key={label}

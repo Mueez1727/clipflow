@@ -160,16 +160,50 @@ export const updateTask = async (input: UpdateTaskInput) => {
         type: 'TASK_ASSIGNED',
         content: `${actorName(dbUser)} assigned you the task "${task.title}"`,
         workspaceId: previous.workSpaceId,
-        link: `/dashboard/${previous.workSpaceId}/workspace`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
       })
     }
 
-    if (input.status === 'DONE' && previous.status !== 'DONE') {
+    const statusChanged =
+      input.status !== undefined && input.status !== previous.status
+
+    if (statusChanged && input.status === 'IN_PROGRESS') {
+      await notifyWorkspaceMembers({
+        workspaceId: previous.workSpaceId,
+        actorId: dbUser.id,
+        type: 'TASK_IN_PROGRESS',
+        content: `${actorName(dbUser)} moved "${task.title}" to In Progress`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
+      })
+    }
+
+    if (statusChanged && input.status === 'DONE' && previous.status !== 'DONE') {
+      await notifyWorkspaceMembers({
+        workspaceId: previous.workSpaceId,
+        actorId: dbUser.id,
+        type: 'TASK_COMPLETED',
+        content: `${actorName(dbUser)} completed "${task.title}"`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
+      })
       await logActivity({
         workspaceId: previous.workSpaceId,
         type: 'TASK_COMPLETED',
         content: `completed "${task.title}"`,
         userId: dbUser.id,
+      })
+    } else if (
+      !statusChanged &&
+      (input.title !== undefined ||
+        input.description !== undefined ||
+        input.priority !== undefined ||
+        input.dueDate !== undefined)
+    ) {
+      await notifyWorkspaceMembers({
+        workspaceId: previous.workSpaceId,
+        actorId: dbUser.id,
+        type: 'TASK_UPDATED',
+        content: `${actorName(dbUser)} updated "${task.title}"`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
       })
     }
 
@@ -196,7 +230,24 @@ export const moveTask = async (taskId: string, status: TASK_STATUS) => {
       data: { status },
     })
 
+    if (status === 'IN_PROGRESS' && previous.status !== 'IN_PROGRESS') {
+      await notifyWorkspaceMembers({
+        workspaceId: previous.workSpaceId,
+        actorId: dbUser.id,
+        type: 'TASK_IN_PROGRESS',
+        content: `${actorName(dbUser)} moved "${previous.title}" to In Progress`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
+      })
+    }
+
     if (status === 'DONE' && previous.status !== 'DONE') {
+      await notifyWorkspaceMembers({
+        workspaceId: previous.workSpaceId,
+        actorId: dbUser.id,
+        type: 'TASK_COMPLETED',
+        content: `${actorName(dbUser)} completed "${previous.title}"`,
+        link: `/dashboard/${previous.workSpaceId}/workspace?tab=tasks`,
+      })
       await logActivity({
         workspaceId: previous.workSpaceId,
         type: 'TASK_COMPLETED',

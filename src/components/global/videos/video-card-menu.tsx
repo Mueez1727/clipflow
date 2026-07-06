@@ -10,6 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { VIDEO_ACTION_BTN, VIDEO_ACTION_ICON } from '@/lib/video-action-styles'
+import { cn } from '@/lib/utils'
 import { Archive, Move, Trash2 } from 'lucide-react'
 import React from 'react'
 import { toast } from 'sonner'
@@ -20,10 +22,8 @@ type Props = {
   currentFolder?: string
   currentFolderName?: string
   showDelete?: boolean
+  showArchive?: boolean
 }
-
-const actionBtn =
-  'flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background/95 text-foreground shadow-md backdrop-blur-sm transition-colors hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] dark:bg-card/95 dark:hover:bg-[#7C3AED]/20'
 
 const CardMenu = ({
   videoId,
@@ -31,6 +31,7 @@ const CardMenu = ({
   currentFolderName,
   currentWorkspace,
   showDelete = true,
+  showArchive = true,
 }: Props) => {
   const { archiveVideo } = useArchiveVideo()
   const { deleteVideo, isPending } = useDeleteVideo()
@@ -54,10 +55,17 @@ const CardMenu = ({
           <TooltipTrigger asChild>
             <div onClick={(e) => e.stopPropagation()}>
               <Modal
-                className={actionBtn}
                 title="Move to folder"
                 description="Move this video to another folder in your library."
-                trigger={<Move className="h-4 w-4" />}
+                trigger={
+                  <button
+                    type="button"
+                    className={VIDEO_ACTION_BTN}
+                    aria-label="Move video"
+                  >
+                    <Move className={VIDEO_ACTION_ICON} />
+                  </button>
+                }
               >
                 <ChangeVideoLocation
                   currentFolder={currentFolder}
@@ -71,23 +79,25 @@ const CardMenu = ({
           <TooltipContent>Move</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Archive video"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                archiveVideo({ id: videoId })
-              }}
-              className={actionBtn}
-            >
-              <Archive className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Archive</TooltipContent>
-        </Tooltip>
+        {showArchive && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Archive video"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  archiveVideo({ id: videoId })
+                }}
+                className={VIDEO_ACTION_BTN}
+              >
+                <Archive className={VIDEO_ACTION_ICON} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Archive</TooltipContent>
+          </Tooltip>
+        )}
 
         {showDelete && (
           <Tooltip>
@@ -97,9 +107,12 @@ const CardMenu = ({
                 aria-label="Delete video"
                 disabled={isPending}
                 onClick={onDelete}
-                className={`${actionBtn} hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400`}
+                className={cn(
+                  VIDEO_ACTION_BTN,
+                  'hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400'
+                )}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className={VIDEO_ACTION_ICON} />
               </button>
             </TooltipTrigger>
             <TooltipContent>Delete Video</TooltipContent>

@@ -1,9 +1,6 @@
 'use client'
 
-import {
-  getJoinedWorkspaces,
-  shareVideoToWorkspace,
-} from '@/actions/collab-workspace'
+import { getJoinedWorkspaces, shareVideoToWorkspace } from '@/actions/collab-workspace'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useQueryData } from '@/hooks/useQueryData'
+import { VIDEO_ACTION_BTN, VIDEO_ACTION_ICON } from '@/lib/video-action-styles'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, Loader2, Share2, Users } from 'lucide-react'
@@ -26,9 +24,10 @@ import { WorkspaceCardData } from '../workspace/workspace-card'
 type Props = {
   videoId: string
   className?: string
+  iconOnly?: boolean
 }
 
-const ShareVideo = ({ videoId, className }: Props) => {
+const ShareVideo = ({ videoId, className, iconOnly }: Props) => {
   const [open, setOpen] = useState(false)
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [sharedIds, setSharedIds] = useState<string[]>([])
@@ -64,18 +63,29 @@ const ShareVideo = ({ videoId, className }: Props) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'h-5 bg-muted p-[5px] hover:bg-accent',
-            className
-          )}
-          aria-label="Share video"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Share2 className="h-4 w-4 text-muted-foreground transition-colors hover:text-[#7C3AED]" />
-        </Button>
+        {iconOnly ? (
+          <button
+            type="button"
+            aria-label="Share video"
+            onClick={(e) => e.stopPropagation()}
+            className={cn(VIDEO_ACTION_BTN, className)}
+          >
+            <Share2 className={VIDEO_ACTION_ICON} />
+          </button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-5 bg-muted p-[5px] hover:bg-accent',
+              className
+            )}
+            aria-label="Share video"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Share2 className="h-4 w-4 text-muted-foreground transition-colors hover:text-[#7C3AED]" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent onClick={(e) => e.stopPropagation()}>
         <DialogHeader>

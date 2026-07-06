@@ -45,7 +45,11 @@ const VideoPreviewSidebar = ({ videoId, source, summary }: Props) => {
           </Tooltip>
         </TooltipProvider>
       </div>
-      <VideoTranscript videoId={videoId} transcript={summary} />
+      <VideoTranscript
+        videoId={videoId}
+        videoSource={source}
+        transcript={summary}
+      />
     </div>
   )
 }

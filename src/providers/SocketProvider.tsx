@@ -50,6 +50,8 @@ type SocketProviderProps = {
 
 export const SocketProvider = ({ children }: SocketProviderProps) => {
   const { isLoaded, isSignedIn, getToken } = useAuth()
+  const getTokenRef = useRef(getToken)
+  getTokenRef.current = getToken
 
   const socketRef = useRef<Socket | null>(null)
   const listenersRef = useRef<ListenerRegistry>(new Map())
@@ -131,7 +133,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
       return
     }
 
-    const token = await getToken()
+    const token = await getTokenRef.current()
     if (!token) return
 
     connectingRef.current = true
@@ -159,7 +161,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
       active.on('disconnect', () => setIsConnected(false))
 
       active.io.on('reconnect_attempt', async () => {
-        const freshToken = await getToken()
+        const freshToken = await getTokenRef.current()
         if (freshToken) active!.auth = { token: freshToken }
       })
 
@@ -171,7 +173,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     } finally {
       connectingRef.current = false
     }
-  }, [getToken, isLoaded, isSignedIn])
+  }, [isLoaded, isSignedIn])
 
   useEffect(() => {
     if (!isLoaded) return

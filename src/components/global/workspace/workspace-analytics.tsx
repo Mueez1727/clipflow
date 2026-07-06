@@ -1,6 +1,5 @@
 'use client'
 
-import { getWorkspaceActivity } from '@/actions/activity'
 import { getWorkspaceAnalytics } from '@/actions/analytics'
 import StatCard from '@/components/global/dashboard/stat-card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   Clock,
   Crown,
-  Eye,
   HardDrive,
   ListTodo,
   Share2,
@@ -18,8 +16,6 @@ import {
 } from 'lucide-react'
 import React from 'react'
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -30,7 +26,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import ActivityTimeline, { ActivityRow } from './activity-timeline'
 
 type AnalyticsData = {
   status: number
@@ -85,14 +80,8 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
     ['workspace-analytics', workspaceId],
     () => getWorkspaceAnalytics(workspaceId)
   )
-  const { data: activityData } = useQueryData(
-    ['workspace-activity', workspaceId],
-    () => getWorkspaceActivity(workspaceId, 8)
-  )
 
   const analytics = (data as AnalyticsData | undefined)?.data
-  const activities =
-    (activityData as { data: ActivityRow[] } | undefined)?.data ?? []
 
   if (isPending || !analytics) {
     return (
@@ -102,8 +91,8 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
             <Skeleton key={i} className="h-28 w-full rounded-2xl" />
           ))}
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
             <Skeleton key={i} className="h-64 w-full rounded-2xl" />
           ))}
         </div>
@@ -211,46 +200,6 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ChartCard title="Recording Trend">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={analytics.recordingTrend}>
-                <defs>
-                  <linearGradient id="recFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b833" vertical={false} />
-                <XAxis dataKey="label" {...chartAxis} />
-                <YAxis allowDecimals={false} {...chartAxis} width={28} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#7C3AED"
-                  strokeWidth={2.5}
-                  fill="url(#recFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div className="glass-card rounded-2xl p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Eye className="h-4 w-4 text-[#7C3AED]" />
-            <h3 className="text-sm font-semibold text-foreground">
-              Recent Activity
-            </h3>
-          </div>
-          <div className="max-h-56 overflow-y-auto pr-1">
-            <ActivityTimeline activities={activities} />
-          </div>
-        </div>
       </div>
     </div>
   )

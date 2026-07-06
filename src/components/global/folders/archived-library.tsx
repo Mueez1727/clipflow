@@ -107,7 +107,7 @@ const ArchivedLibrary = ({ workspaceId }: Props) => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
             {videos.map((video) => (
               <div key={video.id} className="relative">
-                <VideoCard workspaceId={workspaceId} {...video} />
+                <VideoCard workspaceId={workspaceId} archived {...video} />
                 <Button
                   size="sm"
                   variant="outline"

@@ -9,25 +9,87 @@ import { toast } from 'sonner'
 
 type Props = {
   videoId: string
+  videoSource: string
   transcript?: string | null
 }
 
-const VideoTranscript = ({ videoId, transcript: initial }: Props) => {
+const captureVideoFrame = (source: string): Promise<string> => {
+  const streamBase = process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL
+  if (!streamBase) {
+    return Promise.reject(new Error('Video stream URL is not configured'))
+  }
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.crossOrigin = 'anonymous'
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    video.src = `${streamBase}/${source}`
+
+    const cleanup = () => {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+    }
+
+    video.addEventListener('loadeddata', () => {
+      const targetTime =
+        Number.isFinite(video.duration) && video.duration > 0
+          ? Math.min(1, video.duration * 0.25)
+          : 0
+      video.currentTime = targetTime
+    })
+
+    video.addEventListener('seeked', () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = video.videoWidth || 1280
+        canvas.height = video.videoHeight || 720
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          cleanup()
+          reject(new Error('Could not capture frame'))
+          return
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        cleanup()
+        resolve(dataUrl)
+      } catch (error) {
+        cleanup()
+        reject(error)
+      }
+    })
+
+    video.addEventListener('error', () => {
+      cleanup()
+      reject(new Error('Could not load video for frame capture'))
+    })
+  })
+}
+
+const VideoTranscript = ({ videoId, videoSource, transcript: initial }: Props) => {
   const [transcript, setTranscript] = useState(initial ?? '')
   const [isPending, startTransition] = useTransition()
 
   const onGenerate = () => {
     startTransition(async () => {
-      const result = await generateVideoTranscript(videoId)
-      if (result.status === 200 && result.data) {
-        setTranscript(result.data)
-        toast.success('Transcript generated')
-      } else {
-        toast.error(
-          typeof result.data === 'string'
-            ? result.data
-            : 'Could not generate transcript'
-        )
+      try {
+        const frameDataUrl = await captureVideoFrame(videoSource)
+        const result = await generateVideoTranscript(videoId, frameDataUrl)
+        if (result.status === 200 && result.data) {
+          setTranscript(result.data)
+          toast.success('Transcript generated')
+        } else {
+          toast.error(
+            typeof result.data === 'string'
+              ? result.data
+              : 'Could not generate transcript'
+          )
+        }
+      } catch {
+        toast.error('Could not capture a frame from this video')
       }
     })
   }
@@ -69,7 +131,7 @@ const VideoTranscript = ({ videoId, transcript: initial }: Props) => {
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          No transcript yet. Click generate to create one from your video audio.
+          No transcript yet. Generate one from a snapshot of your video.
         </p>
       )}
     </div>
