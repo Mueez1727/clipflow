@@ -27,7 +27,7 @@ const VideoTags = ({ videoId, tags: initialTags, editable = false }: Props) => {
         const result = await updateVideoTags(videoId, next)
         if (result.status === 200 && Array.isArray(result.data)) {
           setTags(result.data)
-          queryClient.invalidateQueries({ queryKey: ['preview-video'] })
+          queryClient.invalidateQueries({ queryKey: ['preview-video', videoId] })
         }
       })
     },

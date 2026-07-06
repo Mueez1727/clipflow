@@ -1,6 +1,7 @@
 'use client'
 
 import { createTask, updateTask } from '@/actions/tasks'
+import { generateTaskFromIdea, GeneratedTaskDraft } from '@/actions/task-ai'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,7 +22,9 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useMutationData } from '@/hooks/useMutationData'
 import { TASK_PRIORITY, TASK_STATUS } from '@prisma/client'
-import React, { useEffect, useState } from 'react'
+import { Loader2, Sparkles } from 'lucide-react'
+import React, { useCallback, useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 export type TaskMember = {
   id: string
@@ -79,6 +82,7 @@ const TaskDialog = ({
 }: Props) => {
   const isEdit = Boolean(task)
 
+  const [idea, setIdea] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<TASK_STATUS>(defaultStatus)
@@ -86,9 +90,12 @@ const TaskDialog = ({
   const [assigneeId, setAssigneeId] = useState<string>(NONE)
   const [videoId, setVideoId] = useState<string>(NONE)
   const [dueDate, setDueDate] = useState('')
+  const [estimatedTime, setEstimatedTime] = useState('')
+  const [generating, startGenerate] = useTransition()
 
   useEffect(() => {
     if (!open) return
+    setIdea('')
     setTitle(task?.title ?? '')
     setDescription(task?.description ?? '')
     setStatus(task?.status ?? defaultStatus)
@@ -96,7 +103,38 @@ const TaskDialog = ({
     setAssigneeId(task?.assigneeId ?? NONE)
     setVideoId(task?.videoId ?? NONE)
     setDueDate(toDateInput(task?.dueDate))
+    setEstimatedTime('')
   }, [open, task, defaultStatus])
+
+  const applyDraft = useCallback((draft: GeneratedTaskDraft) => {
+    setTitle(draft.title)
+    setDescription(draft.description)
+    setPriority(draft.priority)
+    setDueDate(draft.suggestedDeadline)
+    setEstimatedTime(draft.estimatedTime)
+  }, [])
+
+  const onGenerateWithAi = () => {
+    const trimmed = idea.trim()
+    if (!trimmed) {
+      toast.error('Describe your task idea first')
+      return
+    }
+    startGenerate(async () => {
+      const result = await generateTaskFromIdea(workspaceId, trimmed)
+      if (result.status === 200 && result.data && typeof result.data === 'object') {
+        applyDraft(result.data as GeneratedTaskDraft)
+        toast.success('Task details generated')
+      } else {
+        toast.error('Could not generate task', {
+          description:
+            typeof result.data === 'string'
+              ? result.data
+              : 'Please try again or fill the form manually.',
+        })
+      }
+    })
+  }
 
   const { mutate: create, isPending: creating } = useMutationData(
     ['create-task'],
@@ -144,9 +182,18 @@ const TaskDialog = ({
 
   const submit = () => {
     if (!title.trim()) return
+    let finalDescription = description.trim()
+    if (
+      estimatedTime.trim() &&
+      !finalDescription.toLowerCase().includes('estimated time')
+    ) {
+      finalDescription = finalDescription
+        ? `${finalDescription}\n\nEstimated time: ${estimatedTime.trim()}`
+        : `Estimated time: ${estimatedTime.trim()}`
+    }
     const payload = {
       title: title.trim(),
-      description: description.trim(),
+      description: finalDescription,
       status,
       priority,
       assigneeId: assigneeId === NONE ? null : assigneeId,
@@ -167,6 +214,34 @@ const TaskDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {!isEdit && (
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label htmlFor="task-idea">Task idea</Label>
+              <Textarea
+                id="task-idea"
+                value={idea}
+                onChange={(e) => setIdea(e.target.value)}
+                placeholder="e.g. Build authentication flow"
+                rows={2}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onGenerateWithAi}
+                disabled={generating || !idea.trim()}
+                className="gap-2"
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-[#7C3AED]" />
+                )}
+                Generate with AI
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="task-title">Title</Label>
             <Input
@@ -185,6 +260,16 @@ const TaskDialog = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add more detail..."
               rows={3}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="task-estimate">Estimated time</Label>
+            <Input
+              id="task-estimate"
+              value={estimatedTime}
+              onChange={(e) => setEstimatedTime(e.target.value)}
+              placeholder="e.g. 6 hours"
             />
           </div>
 
@@ -243,7 +328,7 @@ const TaskDialog = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="task-due">Due date</Label>
+              <Label htmlFor="task-due">Suggested deadline</Label>
               <Input
                 id="task-due"
                 type="date"
@@ -288,4 +373,4 @@ const TaskDialog = ({
   )
 }
 
-export default TaskDialog
+export default React.memo(TaskDialog)

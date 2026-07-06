@@ -39,6 +39,9 @@ const WorkspaceChat = dynamic(() => import('./workspace-chat'), {
 const WorkspaceSettings = dynamic(() => import('./workspace-settings'), {
   loading: () => <TabSkeleton />,
 })
+const WorkspaceAiAssistant = dynamic(() => import('./workspace-ai-assistant'), {
+  loading: () => <TabSkeleton />,
+})
 
 type Props = {
   workspaceId: string
@@ -56,6 +59,7 @@ const TABS = [
   'analytics',
   'activity',
   'members',
+  'assistant',
   'chat',
   'settings',
 ] as const
@@ -127,7 +131,7 @@ const WorkspaceDashboard = (props: Props) => {
               value={tab}
               className="rounded-full border border-transparent px-5 py-2 capitalize transition-colors hover:border-border hover:bg-accent/60 hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-[#7C3AED] dark:hover:bg-accent/40"
             >
-              {tab}
+              {tab === 'assistant' ? 'AI Assistant' : tab}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -161,6 +165,11 @@ const WorkspaceDashboard = (props: Props) => {
           {visitedTabs.has('members') && (
             <TabsContent value="members" forceMount className={TAB_PANEL_CLASS}>
               <WorkspaceMembers workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('assistant') && (
+            <TabsContent value="assistant" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceAiAssistant workspaceId={props.workspaceId} />
             </TabsContent>
           )}
           {visitedTabs.has('chat') && (

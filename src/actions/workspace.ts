@@ -749,7 +749,7 @@ export const moveVideoLocation = async (
 export const getPreviewVideo = async (videoId: string) => {
   try {
     const user = await currentUser()
-    if (!user) return { status: 404 }
+    if (!user) return { status: 401 }
     const video = await client.video.findUnique({
       where: {
         id: videoId,

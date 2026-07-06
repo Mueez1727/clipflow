@@ -2,14 +2,14 @@
 import { getPreviewVideo, sendEmailForFirstView } from '@/actions/workspace'
 import { useQueryData } from '@/hooks/useQueryData'
 import { isDefaultVideoTitle } from '@/lib/video-metadata'
+import { PERSONAL_ROUTE } from '@/lib/personal-library'
 import { VideoProps } from '@/types/index.type'
 import { useRouter } from 'next/navigation'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import EditVideo from '../edit'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
 import VideoPreviewSidebar from './sidebar'
-import { PERSONAL_ROUTE } from '@/lib/personal-library'
 
 const VideoComments = dynamic(
   () => import('../../workspace/video-comments'),
@@ -33,8 +33,16 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const { data, isPending } = useQueryData(
-    ['preview-video'],
+  const fallbackPath = useMemo(
+    () =>
+      workspaceId && workspaceId !== PERSONAL_ROUTE
+        ? `/dashboard/${workspaceId}`
+        : `/dashboard/${PERSONAL_ROUTE}`,
+    [workspaceId]
+  )
+
+  const { data, isPending, isFetched, isFetching } = useQueryData(
+    ['preview-video', videoId],
     () => getPreviewVideo(videoId),
     true,
     { staleTime: 60_000 }
@@ -46,10 +54,15 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const author = result?.author
 
   useEffect(() => {
-    if (status && status !== 200) {
-      router.push('/')
+    if (!isFetched || isFetching) return
+    if (status === 401) {
+      router.replace('/auth/sign-in')
+      return
     }
-  }, [status, router])
+    if (status === 404 || status === 400) {
+      router.replace(fallbackPath)
+    }
+  }, [status, isFetched, isFetching, router, fallbackPath])
 
   useEffect(() => {
     if (!video || video.views !== 0) return
@@ -57,7 +70,7 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [video?.views, videoId])
 
-  if (isPending || !data || !video) {
+  if (isPending || isFetching || !data || !video || status !== 200) {
     return <Skeleton className="h-96 w-full rounded-2xl" />
   }
 

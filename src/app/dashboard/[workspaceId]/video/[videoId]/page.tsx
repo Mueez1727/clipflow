@@ -33,7 +33,7 @@ const VideoPage = async ({ params: { videoId, workspaceId } }: Props) => {
   })
 
   await query.prefetchQuery({
-    queryKey: ['preview-video'],
+    queryKey: ['preview-video', videoId],
     queryFn: () => getPreviewVideo(videoId),
   })
 
