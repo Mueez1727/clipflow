@@ -4,12 +4,18 @@ import { cn } from '@/lib/utils'
 type BrandLogoProps = {
   className?: string
   textClassName?: string
+  /** Defaults to landing page. Dashboard sidebar passes the home dashboard route. */
+  href?: string
 }
 
-export function BrandLogo({ className, textClassName }: BrandLogoProps) {
+export function BrandLogo({
+  className,
+  textClassName,
+  href = '/',
+}: BrandLogoProps) {
   return (
     <Link
-      href="/"
+      href={href}
       className={cn(
         'group inline-flex items-center transition-all duration-300 ease-in-out',
         'hover:scale-[1.04] hover:translate-y-[-1px]',

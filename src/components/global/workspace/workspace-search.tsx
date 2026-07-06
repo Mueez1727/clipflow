@@ -223,4 +223,4 @@ function ResultGroup<T extends { id: string }>({
   )
 }
 
-export default WorkspaceSearch
+export default React.memo(WorkspaceSearch)

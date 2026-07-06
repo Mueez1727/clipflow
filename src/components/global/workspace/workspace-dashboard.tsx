@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Users } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import WorkspaceAvatar from './workspace-avatar'
 
 const TabSkeleton = () => (
@@ -60,6 +60,8 @@ const TABS = [
   'settings',
 ] as const
 
+const TAB_PANEL_CLASS = 'mt-0 data-[state=inactive]:hidden'
+
 const WorkspaceDashboard = (props: Props) => {
   const router = useRouter()
   const pathname = usePathname()
@@ -70,13 +72,30 @@ const WorkspaceDashboard = (props: Props) => {
     ? (requested as string)
     : 'overview'
 
-  const onTabChange = (value: string) => {
-    const query = value === 'overview' ? '' : `?tab=${value}`
-    router.replace(`${pathname}${query}`, { scroll: false })
-  }
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
+    () => new Set([activeTab])
+  )
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 animate-fade-in">
+  useEffect(() => {
+    setVisitedTabs((prev) => {
+      if (prev.has(activeTab)) return prev
+      const next = new Set(prev)
+      next.add(activeTab)
+      return next
+    })
+  }, [activeTab])
+
+  const onTabChange = useCallback(
+    (value: string) => {
+      setVisitedTabs((prev) => new Set(prev).add(value))
+      const query = value === 'overview' ? '' : `?tab=${value}`
+      router.replace(`${pathname}${query}`, { scroll: false })
+    },
+    [pathname, router]
+  )
+
+  const header = useMemo(
+    () => (
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-[#7C3AED]/10 via-card to-card p-6 shadow-sm sm:flex-row sm:items-center">
         <WorkspaceAvatar name={props.name} className="h-16 w-16 text-2xl" />
         <div className="flex-1">
@@ -92,6 +111,13 @@ const WorkspaceDashboard = (props: Props) => {
           </p>
         </div>
       </div>
+    ),
+    [props.memberCount, props.name]
+  )
+
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6 animate-fade-in">
+      {header}
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
         <TabsList className="flex h-auto w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto bg-transparent p-0 pb-1 scrollbar-thin">
@@ -107,41 +133,57 @@ const WorkspaceDashboard = (props: Props) => {
         </TabsList>
 
         <div className="mt-6">
-          <TabsContent value="overview">
-            <WorkspaceOverview workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="videos">
-            <WorkspaceVideos workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="tasks">
-            <TaskBoard workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="analytics">
-            <WorkspaceAnalytics workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="activity">
-            <WorkspaceActivity workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="members">
-            <WorkspaceMembers workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="chat">
-            <WorkspaceChat workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="settings">
-            <WorkspaceSettings
-              workspaceId={props.workspaceId}
-              name={props.name}
-              inviteCode={props.inviteCode}
-              isOwner={props.isOwner}
-              createdAt={props.createdAt}
-              memberCount={props.memberCount}
-            />
-          </TabsContent>
+          {visitedTabs.has('overview') && (
+            <TabsContent value="overview" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceOverview workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('videos') && (
+            <TabsContent value="videos" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceVideos workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('tasks') && (
+            <TabsContent value="tasks" forceMount className={TAB_PANEL_CLASS}>
+              <TaskBoard workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('analytics') && (
+            <TabsContent value="analytics" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceAnalytics workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('activity') && (
+            <TabsContent value="activity" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceActivity workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('members') && (
+            <TabsContent value="members" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceMembers workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('chat') && (
+            <TabsContent value="chat" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceChat workspaceId={props.workspaceId} />
+            </TabsContent>
+          )}
+          {visitedTabs.has('settings') && (
+            <TabsContent value="settings" forceMount className={TAB_PANEL_CLASS}>
+              <WorkspaceSettings
+                workspaceId={props.workspaceId}
+                name={props.name}
+                inviteCode={props.inviteCode}
+                isOwner={props.isOwner}
+                createdAt={props.createdAt}
+                memberCount={props.memberCount}
+              />
+            </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>
   )
 }
 
-export default WorkspaceDashboard
+export default React.memo(WorkspaceDashboard)

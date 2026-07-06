@@ -95,7 +95,10 @@ const Sidebar = ({ activeWorkspaceId }: Props) => {
   const SidebarSection = (
     <div className="flex h-full w-[250px] flex-none flex-col overflow-y-auto border-r border-border bg-card p-4">
       <div className="mb-4 flex w-full shrink-0 items-center justify-center pt-2">
-        <BrandLogo textClassName="text-xl" />
+        <BrandLogo
+          href={`/dashboard/${PERSONAL_ROUTE}/home`}
+          textClassName="text-xl"
+        />
       </div>
 
       <nav className="mt-3 w-full shrink-0">

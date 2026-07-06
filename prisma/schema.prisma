@@ -108,6 +108,7 @@ model Video {
   workSpaceId String?       @db.Uuid
   views       Int           @default(0)
   summary     String?
+  tags        String[]      @default([])
   Comment     Comment[]
   sharedIn    SharedVideo[]
   videoComments VideoComment[]

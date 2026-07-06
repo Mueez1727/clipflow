@@ -76,7 +76,7 @@ export type VideoProps = {
     views: number
     createdAt: Date
     processing: boolean
-    summary: string
+    tags: string[]
   }
   author: boolean
 }

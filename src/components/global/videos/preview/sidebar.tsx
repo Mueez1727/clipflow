@@ -10,15 +10,13 @@ import {
 } from '@/components/ui/tooltip'
 import { Download } from 'lucide-react'
 import React from 'react'
-import VideoTranscript from '../../video-transcript'
 
 type Props = {
   videoId: string
   source: string
-  summary?: string | null
 }
 
-const VideoPreviewSidebar = ({ videoId, source, summary }: Props) => {
+const VideoPreviewSidebar = ({ videoId, source }: Props) => {
   const downloadUrl = `${process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL}/${source}`
 
   return (
@@ -45,13 +43,8 @@ const VideoPreviewSidebar = ({ videoId, source, summary }: Props) => {
           </Tooltip>
         </TooltipProvider>
       </div>
-      <VideoTranscript
-        videoId={videoId}
-        videoSource={source}
-        transcript={summary}
-      />
     </div>
   )
 }
 
-export default VideoPreviewSidebar
+export default React.memo(VideoPreviewSidebar)

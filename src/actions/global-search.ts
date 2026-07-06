@@ -59,7 +59,15 @@ export const globalSearch = async (rawQuery: string) => {
     const [personalVideos, personalFolders, workspaceVideos, workspaceTasks] =
       await Promise.all([
         client.video.findMany({
-          where: { ...personalVideoWhere(dbUser.id), title: contains },
+          where: {
+            ...personalVideoWhere(dbUser.id),
+            OR: [
+              { title: contains },
+              { description: contains },
+              { tags: { has: query } },
+              { tags: { hasSome: [query] } },
+            ],
+          },
           select: { id: true, title: true },
           take: 8,
           orderBy: { createdAt: 'desc' },
@@ -77,13 +85,20 @@ export const globalSearch = async (rawQuery: string) => {
         workspaceIds.length
           ? client.video.findMany({
               where: {
-                title: contains,
                 OR: [
-                  { workSpaceId: { in: workspaceIds } },
+                  { title: contains },
+                  { description: contains },
+                  { tags: { has: query } },
+                  { tags: { hasSome: [query] } },
+                  {
+                    workSpaceId: { in: workspaceIds },
+                    title: contains,
+                  },
                   {
                     sharedIn: {
                       some: { workSpaceId: { in: workspaceIds } },
                     },
+                    title: contains,
                   },
                 ],
               },

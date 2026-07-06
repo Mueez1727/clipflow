@@ -1,3 +1,4 @@
+import { applyVideoMetadataOnComplete } from '@/lib/server/apply-video-metadata'
 import { client } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -15,14 +16,7 @@ export async function POST(
     return NextResponse.json({ status: 404 })
   }
 
-  const completeProcessing = await client.video.update({
-    where: {
-      source: body.filename,
-    },
-    data: {
-      processing: false,
-    },
-  })
+  const completeProcessing = await applyVideoMetadataOnComplete(body.filename)
   if (completeProcessing) {
     return NextResponse.json({ status: 200 })
   }

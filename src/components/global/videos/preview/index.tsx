@@ -1,6 +1,7 @@
 'use client'
 import { getPreviewVideo, sendEmailForFirstView } from '@/actions/workspace'
 import { useQueryData } from '@/hooks/useQueryData'
+import { isDefaultVideoTitle } from '@/lib/video-metadata'
 import { VideoProps } from '@/types/index.type'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useRef } from 'react'
@@ -18,6 +19,11 @@ const VideoComments = dynamic(
   }
 )
 
+const VideoTags = dynamic(() => import('../video-tags'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-16 w-full rounded-xl" />,
+})
+
 type Props = {
   videoId: string
   workspaceId?: string
@@ -27,11 +33,12 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const { data, isPending } = useQueryData(['preview-video'], () =>
-    getPreviewVideo(videoId)
+  const { data, isPending } = useQueryData(
+    ['preview-video'],
+    () => getPreviewVideo(videoId),
+    true,
+    { staleTime: 60_000 }
   )
-
-  const notifyFirstView = async () => await sendEmailForFirstView(videoId)
 
   const result = data as VideoProps | undefined
   const video = result?.data
@@ -46,12 +53,9 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
 
   useEffect(() => {
     if (!video || video.views !== 0) return
-    notifyFirstView()
-    return () => {
-      notifyFirstView()
-    }
+    void sendEmailForFirstView(videoId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [video?.views])
+  }, [video?.views, videoId])
 
   if (isPending || !data || !video) {
     return <Skeleton className="h-96 w-full rounded-2xl" />
@@ -62,9 +66,7 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   )
 
   const displayTitle =
-    video.title && video.title !== 'Untilted Video' && video.title.trim()
-      ? video.title
-      : null
+    video.title && !isDefaultVideoTitle(video.title) ? video.title : null
   const displayDescription =
     video.description &&
     video.description !== 'No Description' &&
@@ -114,6 +116,11 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
             src={`${process.env.NEXT_PUBLIC_CLOUD_FRONT_STREAM_URL}/${video.source}#1`}
           />
         </video>
+        <VideoTags
+          videoId={videoId}
+          tags={video.tags ?? []}
+          editable={Boolean(author)}
+        />
         <div className="flex flex-col gap-y-4 text-2xl">
           <div className="flex items-center justify-between gap-x-5">
             <p className="text-semibold text-foreground">Description</p>
@@ -143,13 +150,9 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
           />
         )}
       </div>
-      <VideoPreviewSidebar
-        videoId={videoId}
-        source={video.source}
-        summary={video.summary}
-      />
+      <VideoPreviewSidebar videoId={videoId} source={video.source} />
     </div>
   )
 }
 
-export default VideoPreview
+export default React.memo(VideoPreview)

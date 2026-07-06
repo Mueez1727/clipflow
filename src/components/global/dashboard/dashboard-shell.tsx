@@ -50,14 +50,17 @@ const DashboardShell = async ({
     query.prefetchQuery({
       queryKey: ['user-workspaces'],
       queryFn: () => getWorkSpaces(),
+      staleTime: 60_000,
     }),
     query.prefetchQuery({
       queryKey: ['joined-workspaces'],
       queryFn: () => getJoinedWorkspaces(),
+      staleTime: 60_000,
     }),
     query.prefetchQuery({
       queryKey: ['user-notifications'],
       queryFn: () => getUserNotifications(),
+      staleTime: 30_000,
     }),
   ])
 
