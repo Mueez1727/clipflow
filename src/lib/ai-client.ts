@@ -14,7 +14,11 @@ export class AiClientError extends Error {
 }
 
 const resolveApiKey = () => {
-  const key = process.env.OPEN_AI_KEY?.trim()
+  const key = (
+    process.env.OPEN_AI_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ZAI_API_KEY
+  )?.trim()
   if (!key) {
     throw new AiClientError(
       'AI is not configured. Set OPEN_AI_KEY in your environment.'
@@ -87,5 +91,16 @@ export const parseJsonFromAi = <T>(raw: string): T => {
   const trimmed = raw.trim()
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
   const candidate = fenced?.[1]?.trim() ?? trimmed
-  return JSON.parse(candidate) as T
+
+  try {
+    return JSON.parse(candidate) as T
+  } catch {
+    const objectMatch = candidate.match(/\{[\s\S]*\}/)
+    if (objectMatch) {
+      return JSON.parse(objectMatch[0]) as T
+    }
+    throw new AiClientError(
+      'AI returned an invalid response. Please try again.'
+    )
+  }
 }

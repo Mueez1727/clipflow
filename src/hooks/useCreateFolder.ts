@@ -5,7 +5,7 @@ export const useCreateFolders = (workspaceId: string) => {
   const { mutate } = useMutationData(
     ['create-folder'],
     () => createFolder(workspaceId),
-    'workspace-folders'
+    ['workspace-folders', workspaceId]
   )
 
   const onCreateNewFolder = () =>

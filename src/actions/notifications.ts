@@ -14,6 +14,10 @@ export const getUserNotifications = async () => {
       take: 50,
     })
 
+    const unreadCount = await client.notification.count({
+      where: { userId: dbUser.id, read: false },
+    })
+
     const actorIds = Array.from(
       new Set(notifications.map((n) => n.actorId).filter(Boolean))
     ) as string[]
@@ -37,7 +41,7 @@ export const getUserNotifications = async () => {
       actor: n.actorId ? actorMap.get(n.actorId) ?? null : null,
     }))
 
-    const unread = data.filter((n) => !n.read).length
+    const unread = unreadCount
 
     return { status: 200, data, unread }
   } catch (error) {

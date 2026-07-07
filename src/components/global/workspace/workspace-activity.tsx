@@ -10,7 +10,9 @@ import ActivityTimeline, { ActivityRow } from './activity-timeline'
 const WorkspaceActivity = ({ workspaceId }: { workspaceId: string }) => {
   const { data, isPending } = useQueryData(
     ['workspace-activity', workspaceId],
-    () => getWorkspaceActivity(workspaceId)
+    () => getWorkspaceActivity(workspaceId),
+    true,
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const activities = (data as { data: ActivityRow[] } | undefined)?.data ?? []

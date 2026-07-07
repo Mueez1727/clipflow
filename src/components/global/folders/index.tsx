@@ -9,6 +9,7 @@ import { useMutationDataState } from '@/hooks/useMutationData'
 import Videos from '../videos'
 import { useDispatch } from 'react-redux'
 import { FOLDERS } from '@/redux/slices/folders'
+import { useEffect } from 'react'
 
 type Props = {
   workspaceId: string
@@ -31,8 +32,9 @@ export type FoldersProps = {
 const Folders = ({ workspaceId }: Props) => {
   const dispatch = useDispatch()
   //get folders
-  const { data, isFetched } = useQueryData(['workspace-folders'], () =>
-    getWorkspaceFolders(workspaceId)
+  const { data, isFetched } = useQueryData(
+    ['workspace-folders', workspaceId],
+    () => getWorkspaceFolders(workspaceId)
   )
 
 type CreateFolderVariables = {
@@ -51,9 +53,11 @@ const { latestVariables } = useMutationDataState(['create-folder']) as {
   // if (isFetched && folders) {
   // }
 
-  if (isFetched && folders) {
-    dispatch(FOLDERS({ folders: folders }))
-  }
+  useEffect(() => {
+    if (isFetched && folders) {
+      dispatch(FOLDERS({ folders }))
+    }
+  }, [dispatch, folders, isFetched])
 
   return (
     <div
@@ -73,7 +77,7 @@ const { latestVariables } = useMutationDataState(['create-folder']) as {
       <div
         className={cn(
           status !== 200 && 'justify-center',
-          'flex items-center gap-4 overflow-x-auto w-full'
+          'flex items-center gap-4 overflow-x-auto w-full py-3 scrollbar-thin'
         )}
       >
         {status !== 200 ? (

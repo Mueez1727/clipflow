@@ -42,7 +42,9 @@ type OverviewData = {
 const WorkspaceOverview = ({ workspaceId }: { workspaceId: string }) => {
   const { data, isPending } = useQueryData(
     ['workspace-overview', workspaceId],
-    () => getWorkspaceOverview(workspaceId)
+    () => getWorkspaceOverview(workspaceId),
+    true,
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const overview = (data as { status: number; data: OverviewData })?.data

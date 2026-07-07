@@ -77,15 +77,25 @@ const formatDue = (value: string | Date | null) => {
 const TaskBoard = ({ workspaceId }: { workspaceId: string }) => {
   const tasksKey = `workspace-tasks-${workspaceId}`
 
-  const { data, isPending } = useQueryData([tasksKey], () =>
-    getWorkspaceTasks(workspaceId)
+  const queryOptions = { staleTime: 120_000, refetchOnMount: false } as const
+
+  const { data, isPending } = useQueryData(
+    [tasksKey],
+    () => getWorkspaceTasks(workspaceId),
+    true,
+    queryOptions
   )
   const { data: membersData } = useQueryData(
     ['workspace-members', workspaceId],
-    () => getWorkspaceMembers(workspaceId)
+    () => getWorkspaceMembers(workspaceId),
+    true,
+    queryOptions
   )
-  const { data: videosData } = useQueryData(['workspace-videos', workspaceId], () =>
-    getWorkspaceSharedVideos(workspaceId)
+  const { data: videosData } = useQueryData(
+    ['workspace-videos', workspaceId],
+    () => getWorkspaceSharedVideos(workspaceId),
+    true,
+    queryOptions
   )
 
   const serverTasks = (data as { data: TaskItem[] } | undefined)?.data ?? []

@@ -21,15 +21,17 @@ type Props = {
 const Page = async ({ params: { workspaceId } }: Props) => {
   const query = new QueryClient()
 
-  await query.prefetchQuery({
-    queryKey: ['workspace-folders'],
-    queryFn: () => getWorkspaceFolders(workspaceId),
-  })
-
-  await query.prefetchQuery({
-    queryKey: ['user-videos'],
-    queryFn: () => getAllUserVideos(workspaceId),
-  })
+  await Promise.all([
+    query.prefetchQuery({
+      queryKey: ['workspace-folders', workspaceId],
+      queryFn: () => getWorkspaceFolders(workspaceId),
+    }),
+    query.prefetchQuery({
+      queryKey: ['user-videos', workspaceId, workspaceId],
+      queryFn: () =>
+        getAllUserVideos(workspaceId, { unassignedOnly: true, limit: 48 }),
+    }),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(query)}>

@@ -2,6 +2,7 @@
 
 import { formatDurationWithSeconds } from '@/lib/utils'
 import { client } from '@/lib/prisma'
+import { getWorkspaceSharedVideos } from '@/actions/collab-workspace'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -88,19 +89,18 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
 
     const [
       workspace,
-      videosShared,
+      sharedVideosResult,
       tasksCompleted,
       pendingTasks,
       recentActivities,
       mostActiveGroup,
-      allVideos,
       weeklyWorkspaceActivity,
     ] = await Promise.all([
       client.workSpace.findUnique({
         where: { id: workspaceId },
         select: { _count: { select: { members: true } } },
       }),
-      client.sharedVideo.count({ where: { workSpaceId: workspaceId } }),
+      getWorkspaceSharedVideos(workspaceId),
       client.task.count({
         where: { workSpaceId: workspaceId, status: 'DONE' },
       }),
@@ -118,12 +118,20 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
         orderBy: { _count: { userId: 'desc' } },
         take: 1,
       }),
-      client.video.findMany({
-        where: { workSpaceId: workspaceId },
-        select: { views: true },
-      }),
       buildWeeklyWorkspaceActivity(workspaceId, weekAgo),
     ])
+
+    const workspaceVideos = sharedVideosResult.data
+    const videosShared = workspaceVideos.length
+
+    const videoIds = workspaceVideos.map((v) => v.id)
+    const viewRows =
+      videoIds.length > 0
+        ? await client.video.findMany({
+            where: { id: { in: videoIds } },
+            select: { views: true },
+          })
+        : []
 
     let mostActiveMember: string | null = null
     if (mostActiveGroup.length > 0 && mostActiveGroup[0].userId) {
@@ -138,8 +146,8 @@ export const getWorkspaceAnalytics = async (workspaceId: string) => {
       }
     }
 
-    const totalViews = allVideos.reduce((sum, v) => sum + v.views, 0)
-    const totalWatchSeconds = allVideos.reduce(
+    const totalViews = viewRows.reduce((sum, v) => sum + v.views, 0)
+    const totalWatchSeconds = viewRows.reduce(
       (sum, v) => sum + v.views * AVG_VIEW_SECONDS,
       0
     )

@@ -1,6 +1,7 @@
 import {
   MutationFunction,
   MutationKey,
+  QueryKey,
   useMutation,
   useMutationState,
   useQueryClient,
@@ -13,7 +14,7 @@ export const useMutationData = <TVariables>(
   { status: number; data?: string },
     TVariables
   >,
-  queryKey?: string,
+  queryKey?: QueryKey | string,
   onSuccess?: () => void
 ) => {
   const client = useQueryClient()
@@ -31,9 +32,11 @@ export const useMutationData = <TVariables>(
       )
     },
     onSettled: () => {
+      if (!queryKey) return
+      const normalizedQueryKey =
+        typeof queryKey === 'string' ? [queryKey] : queryKey
       void client.invalidateQueries({
-        queryKey: [queryKey],
-        exact: true,
+        queryKey: normalizedQueryKey,
       })
     },
   })

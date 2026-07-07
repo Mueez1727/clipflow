@@ -23,7 +23,8 @@ import {
   LucideIcon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import React from 'react'
+import React, { useState } from 'react'
+import { toast } from 'sonner'
 
 type NotificationItem = {
   id: string
@@ -39,6 +40,12 @@ type NotificationItem = {
   } | null
 }
 
+type NotificationResult = {
+  status: number
+  data: NotificationItem[]
+  unread: number
+}
+
 const TYPE_ICON: Record<string, { icon: LucideIcon; color: string }> = {
   WORKSPACE_JOINED: { icon: UserPlus, color: 'bg-pink-500/10 text-pink-500' },
   COMMENT_ADDED: { icon: MessageSquare, color: 'bg-violet-500/10 text-violet-500' },
@@ -52,21 +59,19 @@ const TYPE_ICON: Record<string, { icon: LucideIcon; color: string }> = {
 const Notifications = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [markingAll, setMarkingAll] = useState(false)
 
   const { data, isPending } = useQueryData(
     ['user-notifications'],
     getUserNotifications
   )
 
-  const result = data as
-    | { status: number; data: NotificationItem[]; unread: number }
-    | undefined
+  const result = data as NotificationResult | undefined
   const notifications = result?.data ?? []
   const unread = result?.unread ?? 0
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
-    queryClient.invalidateQueries({ queryKey: ['notifications-unread'] })
   }
 
   const onOpen = async (item: NotificationItem) => {
@@ -78,8 +83,44 @@ const Notifications = () => {
   }
 
   const markAll = async () => {
-    await markAllNotificationsRead()
-    refresh()
+    if (markingAll || unread === 0) return
+    setMarkingAll(true)
+
+    const previous = queryClient.getQueryData<NotificationResult>([
+      'user-notifications',
+    ])
+
+    queryClient.setQueryData<NotificationResult>(['user-notifications'], (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        unread: 0,
+        data: old.data.map((item) => ({ ...item, read: true })),
+      }
+    })
+
+    try {
+      const response = await markAllNotificationsRead()
+      if (response.status !== 200) {
+        if (previous) {
+          queryClient.setQueryData(['user-notifications'], previous)
+        }
+        toast.error(
+          typeof response.data === 'string'
+            ? response.data
+            : 'Failed to mark notifications as read.'
+        )
+        return
+      }
+      await refresh()
+    } catch {
+      if (previous) {
+        queryClient.setQueryData(['user-notifications'], previous)
+      }
+      toast.error('Failed to mark notifications as read.')
+    } finally {
+      setMarkingAll(false)
+    }
   }
 
   return (
@@ -94,9 +135,14 @@ const Notifications = () => {
           </p>
         </div>
         {unread > 0 && (
-          <Button variant="outline" onClick={markAll} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={markAll}
+            disabled={markingAll}
+            className="gap-2"
+          >
             <CheckCheck className="h-4 w-4" />
-            Mark all read
+            {markingAll ? 'Marking...' : 'Mark all read'}
           </Button>
         )}
       </div>

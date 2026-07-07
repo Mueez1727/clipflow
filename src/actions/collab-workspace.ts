@@ -486,14 +486,10 @@ export const getWorkspaceOverview = async (workspaceId: string) => {
     const allowed = await hasWorkspaceAccess(workspaceId, dbUser.id)
     if (!allowed) return { status: 403, data: null }
 
-    const [videoCount, sharedCount, memberCount, latestVideosResult, members] =
-      await Promise.all([
-        client.video.count({ where: { workSpaceId: workspaceId } }),
-        client.sharedVideo.count({ where: { workSpaceId: workspaceId } }),
-        client.member.count({ where: { workSpaceId: workspaceId } }),
-        getWorkspaceSharedVideos(workspaceId),
-        getWorkspaceMembers(workspaceId),
-      ])
+    const [latestVideosResult, members] = await Promise.all([
+      getWorkspaceSharedVideos(workspaceId),
+      getWorkspaceMembers(workspaceId),
+    ])
 
     const latestVideos = latestVideosResult.data.slice(0, 4)
     const memberList = members.data
@@ -509,8 +505,8 @@ export const getWorkspaceOverview = async (workspaceId: string) => {
     return {
       status: 200,
       data: {
-        totalVideos: videoCount + sharedCount,
-        memberCount: memberList.length || memberCount,
+        totalVideos: latestVideosResult.data.length,
+        memberCount: memberList.length,
         latestVideos,
         recentActivity,
         members: memberList.slice(0, 6),

@@ -1,7 +1,7 @@
 'use client'
 
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Users } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -121,31 +121,31 @@ const WorkspaceDashboard = (props: Props) => {
         </TabsList>
 
         <div className="mt-6">
-          <TabsContent value="overview" className="mt-0">
+          {activeTab === 'overview' && (
             <WorkspaceOverview workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="videos" className="mt-0">
+          )}
+          {activeTab === 'videos' && (
             <WorkspaceVideos workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="tasks" className="mt-0">
+          )}
+          {activeTab === 'tasks' && (
             <TaskBoard workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="analytics" className="mt-0">
+          )}
+          {activeTab === 'analytics' && (
             <WorkspaceAnalytics workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="activity" className="mt-0">
+          )}
+          {activeTab === 'activity' && (
             <WorkspaceActivity workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="members" className="mt-0">
+          )}
+          {activeTab === 'members' && (
             <WorkspaceMembers workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="assistant" className="mt-0">
+          )}
+          {activeTab === 'assistant' && (
             <WorkspaceAiAssistant workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="chat" className="mt-0">
+          )}
+          {activeTab === 'chat' && (
             <WorkspaceChat workspaceId={props.workspaceId} />
-          </TabsContent>
-          <TabsContent value="settings" className="mt-0">
+          )}
+          {activeTab === 'settings' && (
             <WorkspaceSettings
               workspaceId={props.workspaceId}
               name={props.name}
@@ -154,7 +154,7 @@ const WorkspaceDashboard = (props: Props) => {
               createdAt={props.createdAt}
               memberCount={props.memberCount}
             />
-          </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>

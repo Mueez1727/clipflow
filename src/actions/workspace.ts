@@ -111,10 +111,13 @@ export const getWorkspaceFolders = async (workSpaceId: string) => {
       include: {
         _count: {
           select: {
-            videos: true,
+            videos: {
+              where: { archived: false },
+            },
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
     })
     if (isFolders && isFolders.length > 0) {
       return { status: 200, data: isFolders }
@@ -126,7 +129,10 @@ export const getWorkspaceFolders = async (workSpaceId: string) => {
   }
 }
 
-export const getAllUserVideos = async (workSpaceId: string) => {
+export const getAllUserVideos = async (
+  workSpaceId: string,
+  options?: { folderId?: string; unassignedOnly?: boolean; limit?: number }
+) => {
   void workSpaceId
   try {
     const user = await currentUser()
@@ -137,8 +143,17 @@ export const getAllUserVideos = async (workSpaceId: string) => {
     })
     if (!dbUser) return { status: 404 }
 
+    const folderFilter = options?.folderId
+      ? { folderId: options.folderId }
+      : options?.unassignedOnly
+        ? { folderId: null }
+        : {}
+
     const videos = await client.video.findMany({
-      where: personalVideoWhere(dbUser.id),
+      where: {
+        ...personalVideoWhere(dbUser.id),
+        ...folderFilter,
+      },
       select: {
         id: true,
         title: true,
@@ -160,8 +175,9 @@ export const getAllUserVideos = async (workSpaceId: string) => {
         },
       },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: 'desc',
       },
+      take: options?.limit ?? 48,
     })
 
     if (videos && videos.length > 0) {
@@ -824,75 +840,66 @@ export const getPreviewVideo = async (videoId: string) => {
   }
 }
 
-export const sendEmailForFirstView = async (videoId: string) => {
+export const recordVideoView = async (videoId: string) => {
   try {
-    const user = await currentUser()
-    if (!user) return { status: 404 }
-    const firstViewSettings = await client.user.findUnique({
-      where: { clerkid: user.id },
-      select: {
-        firstView: true,
-      },
-    })
-    if (!firstViewSettings?.firstView) return
+    const viewer = await currentUser()
+    if (!viewer) return { status: 401 }
 
-    const video = await client.video.findUnique({
-      where: {
-        id: videoId,
-      },
+    const video = await client.video.update({
+      where: { id: videoId },
+      data: { views: { increment: 1 } },
       select: {
-        title: true,
         views: true,
+        title: true,
         User: {
           select: {
+            id: true,
+            clerkid: true,
             email: true,
+            firstView: true,
           },
         },
       },
     })
-    if (video && video.views === 0) {
-      await client.video.update({
-        where: {
-          id: videoId,
-        },
-        data: {
-          views: video.views + 1,
-        },
-      })
 
-      if (!video.User?.email) {
-        return { status: 404 }
-      }
+    const owner = video.User
+    const isOwnerViewing = owner?.clerkid === viewer.id
 
+    if (
+      video.views === 1 &&
+      owner?.firstView &&
+      owner.email &&
+      !isOwnerViewing
+    ) {
       const { transporter, mailOptions } = await sendEmail(
-        video.User.email,
+        owner.email,
         'You got a viewer',
-        `Your video ${video.title} just got its first viewer`
+        `Your video ${video.title ?? 'Untitled'} just got its first viewer`
       )
 
-      transporter.sendMail(mailOptions, async (error) => {
-        if (error) {
-          console.log(error.message)
-        } else {
-          const notification = await client.user.update({
-            where: { clerkid: user.id },
-            data: {
-              notification: {
-                create: {
-                  content: mailOptions.text,
-                },
-              },
-            },
-          })
-          if (notification) {
-            return { status: 200 }
-          }
-        }
-      })
+      try {
+        await transporter.sendMail(mailOptions)
+        await client.notification.create({
+          data: {
+            userId: owner.id,
+            content: mailOptions.text ?? 'Your video got its first viewer',
+          },
+        })
+      } catch (error) {
+        console.log('First view email error:', error)
+      }
     }
+
+    return { status: 200, data: { views: video.views } }
   } catch (error) {
-    console.log(error)
+    console.log('recordVideoView error:', error)
+    return { status: 500 }
   }
+}
+
+/** @deprecated Use recordVideoView instead */
+export const sendEmailForFirstView = async (videoId: string) => {
+  return recordVideoView(videoId)
 }
 
 export const editVideoInfo = async (

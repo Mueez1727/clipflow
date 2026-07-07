@@ -24,7 +24,9 @@ type Members = {
 const WorkspaceMembers = ({ workspaceId }: { workspaceId: string }) => {
   const { data, isPending } = useQueryData(
     ['workspace-members', workspaceId],
-    () => getWorkspaceMembers(workspaceId)
+    () => getWorkspaceMembers(workspaceId),
+    true,
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const result = data as Members

@@ -1,5 +1,6 @@
 'use client'
 
+import { submitContactForm } from '@/actions/contact'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,14 +11,37 @@ import { toast } from 'sonner'
 export function LandingContactSection() {
   const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const name = (formData.get('name') as string)?.trim()
+    const email = (formData.get('email') as string)?.trim()
+    const message = (formData.get('message') as string)?.trim()
+
+    if (!name || !email || !message) {
+      toast.error('Please fill in all fields.')
+      return
+    }
+
     setSubmitting(true)
-    setTimeout(() => {
+    try {
+      const result = await submitContactForm({ name, email, message })
+      if (result.status === 200) {
+        toast.success('Message sent! We will get back to you soon.')
+        form.reset()
+      } else {
+        toast.error(
+          typeof result.data === 'string'
+            ? result.data
+            : 'Failed to send your message.'
+        )
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again later.')
+    } finally {
       setSubmitting(false)
-      toast.success('Message sent! We will get back to you soon.')
-      event.currentTarget.reset()
-    }, 600)
+    }
   }
 
   return (
@@ -36,16 +60,16 @@ export function LandingContactSection() {
             <li className="flex items-center gap-3">
               <Mail className="h-5 w-5 shrink-0 text-[#7C3AED]" />
               <a
-                href="mailto:hello@clipflow.app"
+                href="mailto:mueeza044@gmail.com"
                 className="text-foreground/90 hover:text-[#7C3AED]"
               >
-                hello@clipflow.app
+                mueeza044@gmail.com
               </a>
             </li>
             <li className="flex items-center gap-3">
               <Share2 className="h-5 w-5 shrink-0 text-[#7C3AED]" />
               <a
-                href="https://github.com/Mueez1727/clipflow-desktop-app"
+                href="https://github.com/Mueez1727"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-foreground/90 hover:text-[#7C3AED]"
@@ -56,7 +80,7 @@ export function LandingContactSection() {
             <li className="flex items-center gap-3">
               <Globe className="h-5 w-5 shrink-0 text-[#7C3AED]" />
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/mueez-ahmad-bab574352/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-foreground/90 hover:text-[#7C3AED]"

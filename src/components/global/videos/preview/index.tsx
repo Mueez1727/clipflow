@@ -1,5 +1,5 @@
 'use client'
-import { getPreviewVideo, sendEmailForFirstView } from '@/actions/workspace'
+import { getPreviewVideo, recordVideoView } from '@/actions/workspace'
 import { useQueryData } from '@/hooks/useQueryData'
 import { isDefaultVideoTitle } from '@/lib/video-metadata'
 import { PERSONAL_ROUTE } from '@/lib/personal-library'
@@ -55,10 +55,16 @@ const VideoPreview = ({ videoId, workspaceId }: Props) => {
   const author = result?.author
 
   useEffect(() => {
-    if (!video || video.views !== 0) return
-    void sendEmailForFirstView(videoId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [video?.views, videoId])
+    if (!video) return
+    const sessionKey = `video-viewed-${videoId}`
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
+      return
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(sessionKey, '1')
+    }
+    void recordVideoView(videoId)
+  }, [video, videoId])
 
   const isLoading = isPending && !video
 

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
+import { toast } from 'sonner'
 
 type NotificationItem = {
   id: string
@@ -73,6 +74,7 @@ const NotificationBell = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
 
   const { data, isPending, isFetching, refetch } = useQueryData(
     ['user-notifications'],
@@ -106,8 +108,44 @@ const NotificationBell = () => {
   }
 
   const markAll = async () => {
-    await markAllNotificationsRead()
-    refresh()
+    if (markingAll || unread === 0) return
+    setMarkingAll(true)
+
+    const previous = queryClient.getQueryData<NotificationResult>([
+      'user-notifications',
+    ])
+
+    queryClient.setQueryData<NotificationResult>(['user-notifications'], (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        unread: 0,
+        data: old.data.map((item) => ({ ...item, read: true })),
+      }
+    })
+
+    try {
+      const result = await markAllNotificationsRead()
+      if (result.status !== 200) {
+        if (previous) {
+          queryClient.setQueryData(['user-notifications'], previous)
+        }
+        toast.error(
+          typeof result.data === 'string'
+            ? result.data
+            : 'Failed to mark notifications as read.'
+        )
+        return
+      }
+      await queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
+    } catch {
+      if (previous) {
+        queryClient.setQueryData(['user-notifications'], previous)
+      }
+      toast.error('Failed to mark notifications as read.')
+    } finally {
+      setMarkingAll(false)
+    }
   }
 
   return (
@@ -133,10 +171,11 @@ const NotificationBell = () => {
             <button
               type="button"
               onClick={markAll}
-              className="flex items-center gap-1 text-xs text-[#7C3AED] transition-colors hover:text-[#6D28D9]"
+              disabled={markingAll}
+              className="flex items-center gap-1 text-xs text-[#7C3AED] transition-colors hover:text-[#6D28D9] disabled:opacity-50"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              Mark all read
+              {markingAll ? 'Marking...' : 'Mark all read'}
             </button>
           )}
         </div>

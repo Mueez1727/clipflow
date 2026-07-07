@@ -14,9 +14,16 @@ type Props = {
 }
 
 const Videos = ({ folderId, videosKey, workspaceId }: Props) => {
-  
-  const { data: videoData } = useQueryData([videosKey], () =>
-    getAllUserVideos(folderId),
+  const isFolderView = folderId !== workspaceId
+
+  const { data: videoData } = useQueryData(
+    [videosKey, workspaceId, folderId],
+    () =>
+      getAllUserVideos(workspaceId, {
+        folderId: isFolderView ? folderId : undefined,
+        unassignedOnly: !isFolderView,
+        limit: 48,
+      }),
     true
   )
 

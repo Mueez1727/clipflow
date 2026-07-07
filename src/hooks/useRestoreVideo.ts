@@ -1,5 +1,5 @@
 import { restoreVideo } from '@/actions/workspace'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { QueryKey, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 type ArchivedVideosCache = {
@@ -7,17 +7,19 @@ type ArchivedVideosCache = {
   data: { id: string }[]
 }
 
-export const useRestoreVideo = (videosKey = 'archived-videos') => {
+export const useRestoreVideo = (
+  videosKey: QueryKey = ['archived-videos']
+) => {
   const queryClient = useQueryClient()
 
   const { mutate: restoreVideoMutate, isPending } = useMutation({
     mutationKey: ['restore-video'],
     mutationFn: (payload: { id: string }) => restoreVideo(payload.id),
     onMutate: async ({ id }) => {
-      await queryClient.cancelQueries({ queryKey: [videosKey] })
-      const previous = queryClient.getQueryData<ArchivedVideosCache>([videosKey])
+      await queryClient.cancelQueries({ queryKey: videosKey })
+      const previous = queryClient.getQueryData<ArchivedVideosCache>(videosKey)
 
-      queryClient.setQueryData<ArchivedVideosCache>([videosKey], (old) => {
+      queryClient.setQueryData<ArchivedVideosCache>(videosKey, (old) => {
         if (!old?.data) return old
         return {
           ...old,
@@ -29,7 +31,7 @@ export const useRestoreVideo = (videosKey = 'archived-videos') => {
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData([videosKey], context.previous)
+        queryClient.setQueryData(videosKey, context.previous)
       }
       toast('Error', { description: 'Failed to restore video' })
     },
@@ -39,8 +41,9 @@ export const useRestoreVideo = (videosKey = 'archived-videos') => {
       })
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: [videosKey] })
+      void queryClient.invalidateQueries({ queryKey: videosKey })
       void queryClient.invalidateQueries({ queryKey: ['user-videos'] })
+      void queryClient.invalidateQueries({ queryKey: ['folder-videos'] })
     },
   })
 

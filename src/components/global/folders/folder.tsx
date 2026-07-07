@@ -10,9 +10,10 @@ type Props = {
 
 const FolderInfo = ({ folderId }: Props) => {
   const { data } = useQueryData(
-    ['folder-info'], 
+    ['folder-info', folderId],
     () => getFolderInfo(folderId),
-    true )
+    true
+  )
   const { data: folder } = data as FolderProps
 
 

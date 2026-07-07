@@ -28,7 +28,9 @@ type SharedVideos = {
 const WorkspaceVideos = ({ workspaceId }: { workspaceId: string }) => {
   const { data, isPending } = useQueryData(
     ['workspace-videos', workspaceId],
-    () => getWorkspaceSharedVideos(workspaceId)
+    () => getWorkspaceSharedVideos(workspaceId),
+    true,
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const result = data as SharedVideos

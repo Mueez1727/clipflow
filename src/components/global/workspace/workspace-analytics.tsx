@@ -75,7 +75,7 @@ const WorkspaceAnalytics = ({ workspaceId }: { workspaceId: string }) => {
     ['workspace-analytics', workspaceId],
     () => getWorkspaceAnalytics(workspaceId),
     true,
-    { staleTime: 60_000 }
+    { staleTime: 120_000, refetchOnMount: false }
   )
 
   const analytics = (data as AnalyticsData | undefined)?.data

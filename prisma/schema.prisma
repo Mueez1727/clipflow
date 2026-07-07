@@ -83,6 +83,9 @@ model WorkSpace {
   activities   Activity[]
   videos       Video[]
   User         User?         @relation(fields: [userId], references: [id])
+
+  @@index([userId, type])
+  @@index([createdAt])
 }
 
 model Folder {
@@ -93,29 +96,36 @@ model Folder {
   workSpaceId String?    @db.Uuid
   WorkSpace   WorkSpace? @relation(fields: [workSpaceId], references: [id])
   videos      Video[]
+
+  @@index([workSpaceId, archived, createdAt])
 }
 
 model Video {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String?       @default("Untilted Video")
-  description String?       @default("No Description")
-  source      String        @unique
-  archived    Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  folderId    String?       @db.Uuid
-  userId      String?       @db.Uuid
-  processing  Boolean       @default(true)
-  workSpaceId String?       @db.Uuid
-  views       Int           @default(0)
-  summary     String?
-  tags        String[]      @default([])
-  Comment     Comment[]
-  sharedIn    SharedVideo[]
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String?        @default("Untilted Video")
+  description   String?        @default("No Description")
+  source        String         @unique
+  archived      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  folderId      String?        @db.Uuid
+  userId        String?        @db.Uuid
+  processing    Boolean        @default(true)
+  workSpaceId   String?        @db.Uuid
+  views         Int            @default(0)
+  summary       String?
+  tags          String[]       @default([])
+  Comment       Comment[]
+  sharedIn      SharedVideo[]
   videoComments VideoComment[]
-  tasks       Task[]
-  Folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  User        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  WorkSpace   WorkSpace?    @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+  Folder        Folder?        @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  User          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  WorkSpace     WorkSpace?     @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archived, createdAt])
+  @@index([folderId, archived, createdAt])
+  @@index([workSpaceId, archived, createdAt])
+  @@index([processing])
 }
 
 model Message {
@@ -156,6 +166,8 @@ model Member {
   workSpaceId String?    @db.Uuid
   User        User?      @relation(fields: [userId], references: [id])
   WorkSpace   WorkSpace? @relation(fields: [workSpaceId], references: [id])
+
+  @@index([userId, workSpaceId])
 }
 
 model Notification {
@@ -169,6 +181,9 @@ model Notification {
   link        String?
   createdAt   DateTime @default(now())
   User        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, read, createdAt])
+  @@index([workSpaceId, createdAt])
 }
 
 model Invite {
@@ -237,6 +252,8 @@ model Activity {
   createdAt   DateTime  @default(now())
   WorkSpace   WorkSpace @relation(fields: [workSpaceId], references: [id], onDelete: Cascade)
   User        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workSpaceId, createdAt])
 }
 
 enum TASK_STATUS {

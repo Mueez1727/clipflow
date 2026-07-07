@@ -51,10 +51,18 @@ Do not include markdown or extra text.`
         },
         { role: 'user', content: prompt },
       ],
-      { temperature: 0.2, maxTokens: 500 }
+      { temperature: 0.2, maxTokens: 700 }
     )
 
-    const parsed = parseJsonFromAi<GeneratedTaskDraft>(raw)
+    let parsed: GeneratedTaskDraft
+    try {
+      parsed = parseJsonFromAi<GeneratedTaskDraft>(raw)
+    } catch (error) {
+      if (error instanceof AiClientError) throw error
+      throw new AiClientError(
+        'AI returned an invalid response. Please try again.'
+      )
+    }
 
     const priority = PRIORITIES.includes(parsed.priority)
       ? parsed.priority
