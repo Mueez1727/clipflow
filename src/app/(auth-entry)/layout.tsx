@@ -4,6 +4,6 @@ type Props = {
   children: React.ReactNode
 }
 
-export default function AuthMarketingRouteLayout({ children }: Props) {
+export default function AuthEntryLayout({ children }: Props) {
   return <AuthMarketingLayout>{children}</AuthMarketingLayout>
 }
