@@ -3,14 +3,12 @@
 import {
   getArchivedFolders,
   getArchivedVideos,
-  restoreFolder,
 } from '@/actions/workspace'
 import VideoCard from '@/components/global/videos/video-card'
 import { Button } from '@/components/ui/button'
 import { useRestoreVideo } from '@/hooks/useRestoreVideo'
-import { useMutationData } from '@/hooks/useMutationData'
+import { useRestoreFolder } from '@/hooks/useRestoreFolder'
 import { useQueryData } from '@/hooks/useQueryData'
-import { useQueryClient } from '@tanstack/react-query'
 import { ArchiveRestore, FolderOpen } from 'lucide-react'
 import React from 'react'
 
@@ -19,7 +17,6 @@ type Props = {
 }
 
 const ArchivedLibrary = ({ workspaceId }: Props) => {
-  const queryClient = useQueryClient()
   const { data: foldersData } = useQueryData(
     ['archived-folders', workspaceId],
     () => getArchivedFolders(workspaceId)
@@ -30,7 +27,7 @@ const ArchivedLibrary = ({ workspaceId }: Props) => {
   )
 
   const folders =
-    (foldersData as { data: { id: string; name: string; _count: { videos: number } }[] })
+    (foldersData as { data: { id: string; name: string; _count: { videos: number }; createdAt: Date; workSpaceId: string | null }[] })
       ?.data ?? []
   const videos =
     (videosData as {
@@ -49,16 +46,8 @@ const ArchivedLibrary = ({ workspaceId }: Props) => {
       }[]
     })?.data ?? []
 
-  const { mutate: restoreFolderMutate } = useMutationData(
-    ['restore-folder'],
-    (payload: { id: string }) => restoreFolder(payload.id),
-    ['archived-folders', workspaceId],
-    () => {
-      queryClient.invalidateQueries({
-        queryKey: ['workspace-folders', workspaceId],
-      })
-    }
-  )
+  const { restoreFolder, isPending: restoringFolder } =
+    useRestoreFolder(workspaceId)
 
   const { restoreVideo, isPending: restoring } = useRestoreVideo([
     'archived-videos',
@@ -96,8 +85,9 @@ const ArchivedLibrary = ({ workspaceId }: Props) => {
                 <Button
                   size="sm"
                   variant="outline"
+                  disabled={restoringFolder}
                   className="shrink-0 gap-1 text-xs"
-                  onClick={() => restoreFolderMutate({ id: folder.id })}
+                  onClick={() => restoreFolder({ folder })}
                 >
                   <ArchiveRestore className="h-3 w-3" />
                   Restore

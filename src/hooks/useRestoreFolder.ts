@@ -1,30 +1,33 @@
 'use client'
 
-import { archiveFolder } from '@/actions/workspace'
+import { restoreFolder } from '@/actions/workspace'
 import { FoldersProps } from '@/components/global/folders/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-type ArchivedFoldersCache = {
-  status: number
-  data: {
-    id: string
-    name: string
-    createdAt: Date
-    workSpaceId: string | null
-    _count: { videos: number }
-  }[]
+export type RestorableFolder = {
+  id: string
+  name: string
+  createdAt: Date
+  workSpaceId: string | null
+  _count: { videos: number }
 }
 
-export const useArchiveFolder = (workspaceId: string) => {
+type ArchivedFoldersCache = {
+  status: number
+  data: RestorableFolder[]
+}
+
+export const useRestoreFolder = (workspaceId: string) => {
   const queryClient = useQueryClient()
   const foldersKey = ['workspace-folders', workspaceId] as const
   const archivedKey = ['archived-folders', workspaceId] as const
 
   const { mutate, isPending } = useMutation({
-    mutationKey: ['archive-folder'],
-    mutationFn: (data: { id: string }) => archiveFolder(data.id),
-    onMutate: async ({ id }) => {
+    mutationKey: ['restore-folder'],
+    mutationFn: (payload: { folder: RestorableFolder }) =>
+      restoreFolder(payload.folder.id),
+    onMutate: async ({ folder }) => {
       await queryClient.cancelQueries({ queryKey: foldersKey })
       await queryClient.cancelQueries({ queryKey: archivedKey })
 
@@ -32,29 +35,24 @@ export const useArchiveFolder = (workspaceId: string) => {
       const previousArchived =
         queryClient.getQueryData<ArchivedFoldersCache>(archivedKey)
 
-      const archivedFolder = previousFolders?.data?.find(
-        (folder) => folder.id === id
-      )
-
-      queryClient.setQueryData<FoldersProps>(foldersKey, (old) => {
+      queryClient.setQueryData<ArchivedFoldersCache>(archivedKey, (old) => {
         if (!old?.data) return old
-        const next = old.data.filter((folder) => folder.id !== id)
+        const next = old.data.filter((item) => item.id !== folder.id)
         return {
           status: next.length ? 200 : 404,
           data: next,
         }
       })
 
-      if (archivedFolder) {
-        queryClient.setQueryData<ArchivedFoldersCache>(archivedKey, (old) => {
-          const existing = old?.data ?? []
-          if (existing.some((folder) => folder.id === id)) return old
-          return {
-            status: 200,
-            data: [archivedFolder, ...existing],
-          }
-        })
-      }
+      queryClient.setQueryData<FoldersProps>(foldersKey, (old) => {
+        const existing = old?.data ?? []
+        if (existing.some((item) => item.id === folder.id)) return old
+        const next = [folder, ...existing]
+        return {
+          status: 200,
+          data: next,
+        }
+      })
 
       return { previousFolders, previousArchived }
     },
@@ -65,7 +63,7 @@ export const useArchiveFolder = (workspaceId: string) => {
       if (context?.previousArchived) {
         queryClient.setQueryData(archivedKey, context.previousArchived)
       }
-      toast.error('Error', { description: 'Failed to archive folder' })
+      toast.error('Error', { description: 'Failed to restore folder' })
     },
     onSuccess: (data) => {
       toast(data.status === 200 ? 'Success' : 'Error', {
@@ -78,5 +76,5 @@ export const useArchiveFolder = (workspaceId: string) => {
     },
   })
 
-  return { archiveFolder: mutate, isPending }
+  return { restoreFolder: mutate, isPending }
 }

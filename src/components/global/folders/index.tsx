@@ -3,6 +3,7 @@ import FolderDuotone from '@/components/icons/folder-duotone'
 import { cn } from '@/lib/utils'
 import { ArrowRight } from 'lucide-react'
 import Folder from './folder-info'
+import { FoldersProps } from './types'
 import { useQueryData } from '@/hooks/useQueryData'
 import { getWorkspaceFolders } from '@/actions/workspace'
 import { useMutationDataState } from '@/hooks/useMutationData'
@@ -13,20 +14,6 @@ import { useEffect } from 'react'
 
 type Props = {
   workspaceId: string
-}
-
-export type FoldersProps = {
-  status: number
-  data: ({
-    _count: {
-      videos: number
-    }
-  } & {
-    id: string
-    name: string
-    createdAt: Date
-    workSpaceId: string | null
-  })[]
 }
 
 const Folders = ({ workspaceId }: Props) => {
@@ -88,6 +75,7 @@ const { latestVariables } = useMutationDataState(['create-folder']) as {
               <Folder
                 name={latestVariables.variables.name}
                 id={latestVariables.variables.id}
+                workspaceId={workspaceId}
                 optimistic
               />
             )}
@@ -96,6 +84,7 @@ const { latestVariables } = useMutationDataState(['create-folder']) as {
                 name={folder.name}
                 count={folder._count.videos}
                 id={folder.id}
+                workspaceId={workspaceId}
                 key={folder.id}
               />
             ))}
@@ -112,3 +101,4 @@ const { latestVariables } = useMutationDataState(['create-folder']) as {
 }
 
 export default Folders
+export type { FoldersProps, FolderItem } from './types'
